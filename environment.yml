@@ -1,0 +1,27 @@
+name: agent_lab
+channels:
+  - pytorch
+  - nvidia
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+    # - vosk==0.3.44
+    # - opencv-python-headless==4.8.0.76
+    # - pydub==0.25.1
+    # - streamlit_webrtc==0.47.0
+    # - twilio==8.8.0
+    - python-dotenv==1.0.0
+    # - watchdog==3.0.0
+    # - torch==2.0.1
+    # - numpy==1.25.2
+    # - open_clip_torch==2.20.0
+    # - transformers==4.33.1
+    - openai==0.28.0
+    # - elevenlabs==0.2.26
+    # - ray[default]==2.6.3
+    # - ray==2.6.3
+    - fastapi
+    - python-socketio
+    - uvicorn
+

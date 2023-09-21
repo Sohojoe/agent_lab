@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        #container {
+            display: flex;
+            height: calc(100vh - 10px);
+            /* Adjust if you have additional offsets */
+        }
+
+        #debug {
+            flex: 1;
+            overflow-y: scroll;
+        }
+
+        #chat-container {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #chat {
+            flex: 1;
+            overflow-y: scroll;
+            display: flex;
+            flex-direction: column-reverse;
+        }
+
+        #input-container {
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+            /* Prevent the input container from shrinking */
+        }
+
+        textarea {
+            flex: 1;
+            height: 2em;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div id="debug"></div>
+        <div id="chat-container">
+            <div id="chat"></div>
+            <div id="input-container">
+                <textarea id="input"></textarea>
+                <button onclick="send()">Send</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const socket = io('http://127.0.0.1:8000');
+        const input = document.getElementById("input");
+        const chat = document.getElementById("chat");
+        const debug = document.getElementById("debug");
+
+        input.addEventListener("input", function () {
+            socket.emit("typing_in_progress", input.value);
+        });
+
+        input.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                send();
+            }
+        });
+
+        function send() {
+            socket.emit("complete_sentence", input.value);
+            input.value = "";
+        }
+
+        socket.on("update_debug", function (data) {
+            debug.innerHTML = data.join("<br>");
+        });
+
+        socket.on("update_chat", function (data) {
+            chat.innerHTML = data.join("<br>");
+        });
+    </script>
+</body>
+
+</html>
