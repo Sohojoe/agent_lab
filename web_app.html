@@ -9,7 +9,9 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Arial, sans-serif';
+            font-family: intercom-font, "Helvetica Neue", "Apple Color Emoji", Helvetica, Arial, sans-serif;
+            color: #d1d5db;
+            line-height: 1.5;
         }
 
         body {
@@ -28,6 +30,7 @@
             overflow-y: scroll;
             padding: 20px;
             border-right: 1px solid #333;
+            background-color: #202123;
         }
 
         #chat-container {
@@ -43,6 +46,12 @@
             display: flex;
             flex-direction: column-reverse;
             padding: 20px;
+            background-color: #444654;
+        }
+
+        #input-container-wrapper {
+            background-color: #444654;
+            padding: 8px;
         }
 
         /* Input Container Styles */
@@ -50,24 +59,28 @@
             display: flex;
             align-items: center;
             flex-shrink: 0;
-            padding: 10px;
-            border-top: 1px solid #333;
+            padding: 5px;
+            background-color: #40414f;
+            border-radius: 16px;
+            margin-bottom: 8px;
         }
 
         /* Textarea Styles */
         textarea {
             flex: 1;
             height: 2em;
-            background-color: #333;
             border: none;
             color: #fff;
-            padding: 10px;
+            outline: none;
+            background-color: #40414f;
+            padding: 8px;
             margin-right: 10px;
+            font-size: 16px;
         }
 
         /* Button Styles */
         button {
-            background-color: #007BFF;
+            background-color: #6b6c7b;
             color: white;
             border: none;
             padding: 10px 20px;
@@ -75,7 +88,7 @@
         }
 
         button:hover {
-            background-color: #0056b3;
+            background-color: #202123;
         }
     </style>
 </head>
@@ -85,9 +98,11 @@
         <div id="debug"></div>
         <div id="chat-container">
             <div id="chat"></div>
-            <div id="input-container">
-                <textarea id="input"></textarea>
-                <button onclick="send()">Send</button>
+            <div id="input-container-wrapper">
+                <div id="input-container">
+                    <textarea id="input"></textarea>
+                    <button onclick="send()">Send</button>
+                </div>
             </div>
         </div>
     </div>
