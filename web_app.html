@@ -50,7 +50,7 @@
         }
 
         #input-container-wrapper {
-            background-color: #444654;
+            background-color: #343437;
             padding: 8px;
         }
 
@@ -63,26 +63,34 @@
             background-color: #40414f;
             border-radius: 16px;
             margin-bottom: 8px;
+            margin-top: 8px;
         }
 
         /* Textarea Styles */
         textarea {
             flex: 1;
-            height: 2em;
+            height: 40px;
             border: none;
             color: #fff;
             outline: none;
             background-color: #40414f;
             padding: 8px;
             margin-right: 10px;
+            margin-top: 0;
+            margin-bottom: 0;
+            line-height: 1.5em;
+            vertical-align: middle;
             font-size: 16px;
+            resize: none;
+            overflow-y: hidden;
         }
 
         /* Button Styles */
         button {
-            background-color: #6b6c7b;
+            background-color: #343437;
             color: white;
             border: none;
+            border-radius: 12px;
             padding: 10px 20px;
             cursor: pointer;
         }
@@ -113,6 +121,7 @@
         const debug = document.getElementById("debug");
 
         input.addEventListener("input", function () {
+            autoResizeTextarea();
             socket.emit("typing_in_progress", input.value);
         });
 
@@ -126,6 +135,7 @@
         function send() {
             socket.emit("complete_sentence", input.value);
             input.value = "";
+            autoResizeTextarea();
         }
 
         socket.on("update_debug", function (data) {
@@ -135,6 +145,27 @@
         socket.on("update_chat", function (data) {
             chat.innerHTML = data.join("<br>");
         });
+
+        function autoResizeTextarea() {
+            const maxRows = 8;  // Max number of rows before scrolling
+            const lineHeight = parseFloat(window.getComputedStyle(input).lineHeight);
+            const maxHeight = maxRows * lineHeight;
+
+            // Reset overflow and height to initial values
+            input.style.overflowY = 'hidden';
+            input.style.height = lineHeight + 'px';
+
+            const newHeight = Math.min(input.scrollHeight, maxHeight);
+
+            // Only update the height if scrollHeight is greater than lineHeight
+            if (input.scrollHeight > lineHeight) {
+                input.style.height = newHeight + 'px';
+            }
+
+            if (input.scrollHeight > maxHeight) {
+                input.style.overflowY = 'scroll';
+            }
+        }
     </script>
 </body>
 
