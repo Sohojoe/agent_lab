@@ -4,21 +4,30 @@
 <head>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
+        /* Global Styles */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: 'Arial, sans-serif';
         }
 
+        body {
+            background-color: #1e1e1e;
+            color: #ffffff;
+        }
+
+        /* Container Styles */
         #container {
             display: flex;
             height: calc(100vh - 10px);
-            /* Adjust if you have additional offsets */
         }
 
         #debug {
             flex: 1;
             overflow-y: scroll;
+            padding: 20px;
+            border-right: 1px solid #333;
         }
 
         #chat-container {
@@ -27,23 +36,46 @@
             flex-direction: column;
         }
 
+        /* Chat Styles */
         #chat {
             flex: 1;
             overflow-y: scroll;
             display: flex;
             flex-direction: column-reverse;
+            padding: 20px;
         }
 
+        /* Input Container Styles */
         #input-container {
             display: flex;
             align-items: center;
             flex-shrink: 0;
-            /* Prevent the input container from shrinking */
+            padding: 10px;
+            border-top: 1px solid #333;
         }
 
+        /* Textarea Styles */
         textarea {
             flex: 1;
             height: 2em;
+            background-color: #333;
+            border: none;
+            color: #fff;
+            padding: 10px;
+            margin-right: 10px;
+        }
+
+        /* Button Styles */
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
