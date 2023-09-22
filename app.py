@@ -64,7 +64,9 @@ async def typing_in_progress(sid, data):
 async def complete_sentence(sid, data):
     global user_typing_feed
     user_typing_feed = ""
-    chat_history.append(data)
+    lines = data.split('\n')
+    for line in lines:
+        chat_history.append(line)
     await sio.emit("update_chat", chat_history)
 
 

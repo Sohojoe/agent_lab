@@ -128,7 +128,23 @@
         input.addEventListener("keydown", function (event) {
             if (event.key === "Enter") {
                 event.preventDefault();
-                send();
+                if (event.shiftKey) {
+                    // Insert a new line at cursor position
+                    const cursorPos = input.selectionStart;
+                    const textBeforeCursor = input.value.substring(0, cursorPos);
+                    const textAfterCursor = input.value.substring(cursorPos, input.value.length);
+                    input.value = textBeforeCursor + "\n" + textAfterCursor;
+
+                    // Move the cursor to the new position
+                    input.selectionStart = cursorPos + 1;
+                    input.selectionEnd = cursorPos + 1;
+
+                    // Trigger the input event to resize the textarea
+                    autoResizeTextarea();
+                } else {
+                    // Send the message
+                    send();
+                }
             }
         });
 
