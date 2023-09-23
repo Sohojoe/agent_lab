@@ -87,10 +87,10 @@ class Main:
         for item in list_of_strings:
             lines = item.split('\n')
             for line in lines:
-                # if line.isspace() or len(line) == 0:
-                #     continue
                 chat_history.append(line)
-        await sio.emit("update_chat", chat_history)        
+        if chat_history != self.chat_history:
+            await sio.emit("update_chat", chat_history)
+        self.chat_history = chat_history
 
     async def main_loop(self):
         while True:
@@ -103,9 +103,6 @@ class Main:
             for new_response in response_step_obs.llm_responses:
                 self.prompt_manager.append_assistant_message(new_response)
 
-            # await self.emit_chat_history(human_preview_text)
-            # await self.emit_debug()
-            # await asyncio.sleep(1 / 30)
             await asyncio.gather(
                 self.emit_chat_history(human_preview_text),
                 self.emit_debug(),
