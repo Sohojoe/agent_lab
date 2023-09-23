@@ -33,6 +33,7 @@ class ResponseStateManager:
         self.step = 0
         self.response_step_obs = None
         self.response_state = None
+        self.show_packets = False
         self.reset_episode()
 
     def reset_episode(self)->(ResponseStepObservations, ResponseState):
@@ -67,7 +68,8 @@ class ResponseStateManager:
         line = ""
         for i, response in enumerate(self.response_state.current_responses):
             line += "🤖 " if len(line) == 0 else ""
-            line += f"[{self.response_state.speech_chunks_per_response[i]}] {response}  \n"
+            line += f"[{self.response_state.speech_chunks_per_response[i]}] " if self.show_packets else ""
+            line += f"{response}  \n"
         return line
     
     def pretty_print_preview_text(self)->str:

@@ -2,13 +2,11 @@ import asyncio
 import itertools
 import json
 import os
-import torch
 import openai
 
 class ChatService:
     def __init__(self, api="openai", model_id = "gpt-3.5-turbo"):
         self._api = api
-        self._device = "cuda:0" if torch.cuda.is_available() else "cpu"
         openai.api_key = os.getenv("OPENAI_API_KEY")
         self._model_id = model_id
 
