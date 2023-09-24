@@ -37,7 +37,7 @@ class RespondToPromptAsync:
             agent_response['llm_sentence'] = text
             agent_response['llm_sentences'].append(text)
             self.response_state_manager.add_llm_response_and_clear_llm_preview(text)
-            print(f"{agent_response['llm_sentence']} id: {agent_response['llm_sentence_id']} from prompt: {agent_response['prompt']}")
+            print(f"text:{agent_response['llm_sentence']} id: {agent_response['llm_sentence_id']} from prompt: {agent_response['prompt']}")
             sentence_response = agent_response.make_copy()
             # TODO add any chains on sentence here
             agent_response['llm_sentence_id'] += 1
@@ -49,8 +49,12 @@ class RespondToPromptAsync:
                 agent_response['llm_preview'] = ''
                 agent_response['llm_sentence'] = text
                 agent_response['llm_sentences'].append(text)
-                self.response_state_manager.add_llm_response_and_clear_llm_preview(text)
-                print(f"{agent_response['llm_sentence']} id: {agent_response['llm_sentence_id']} from prompt: {agent_response['prompt']}")
+                call_again = function.arguments_json.get("call_again", False)
+                emotion = function.arguments_json.get('emotion', None)
+                self.response_state_manager.add_llm_response_and_clear_llm_preview(text, emotion, call_again)
+                agent_response['emotion'] = emotion
+                agent_response['call_again'] = call_again
+                print(f"function:{agent_response['llm_sentence']} id: {agent_response['llm_sentence_id']} from prompt: {agent_response['prompt']}")
                 sentence_response = agent_response.make_copy()
                 # TODO add any chains on sentence here
                 agent_response['llm_sentence_id'] += 1
@@ -69,7 +73,8 @@ class RespondToPromptAsync:
             emotion = part_json.get("emotion")
             if text:
                 agent_response['llm_preview'] = text
-                self.response_state_manager.set_llm_preview(text)
+                self.response_state_manager.set_llm_preview(text, emotion)
+                agent_response['emotion'] = emotion
             
 
         async with TaskGroup() as tg:

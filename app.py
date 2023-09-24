@@ -63,6 +63,8 @@ class Main:
         self.debug_info.append(f"---- debug info ----")
         self.debug_info.append(f"episode: {self.response_state_manager.episode}")
         self.debug_info.append(f"step: {self.response_state_manager.step}")
+        self.debug_info.append(f"emotion: {self.response_state_manager.response_state.emotion}")
+        self.debug_info.append(f"call_again: {self.response_state_manager.response_state.call_again}")
         task_status = "n/a"
         if self.respond_to_prompt_task is not None:
             if self.respond_to_prompt_task.done():
@@ -102,6 +104,14 @@ class Main:
 
             for new_response in response_step_obs.llm_responses:
                 self.prompt_manager.append_assistant_message(new_response)
+
+            if self.respond_to_prompt_task is not None:
+                if self.respond_to_prompt_task.done():
+                    self.respond_to_prompt_task = None
+                    self.respond_to_prompt = None
+                    if self.response_state_manager.response_state.call_again:
+                        self.respond_to_prompt = RespondToPromptAsync(self.response_state_manager)
+                        self.respond_to_prompt_task = asyncio.create_task(self.respond_to_prompt.run("", self.prompt_manager))
 
             await asyncio.gather(
                 self.emit_chat_history(human_preview_text),

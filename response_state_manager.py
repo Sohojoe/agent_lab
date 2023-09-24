@@ -21,6 +21,8 @@ class ResponseState:
         self.current_responses = []
         self.speech_chunks_per_response = []
         self.llm_preview = ''
+        self.emotion = None
+        self.call_again = False
 
     def __str__(self):
         state = ', '.join(f'{k}={v}' for k, v in self.__dict__.items() if k not in {'episode', 'step'})
@@ -49,16 +51,19 @@ class ResponseStateManager:
         self.response_step_obs = ResponseStepObservations(self.episode, self.step)
         return previous_state, self.response_state
 
-    def set_llm_preview(self, llm_preview):
+    def set_llm_preview(self, llm_preview, emotion=None):
         self.response_step_obs.llm_preview = llm_preview
         self.response_state.llm_preview = llm_preview
+        self.response_state.emotion = emotion
 
-    def add_llm_response_and_clear_llm_preview(self, llm_response):
+    def add_llm_response_and_clear_llm_preview(self, llm_response, emotion=None, call_again=False):
         self.response_state.current_responses.append(llm_response)
         self.response_state.speech_chunks_per_response.append(0)
         self.response_step_obs.llm_responses.append(llm_response)
         self.response_step_obs.llm_preview = ''
         self.response_state.llm_preview = ''
+        self.response_state.emotion = emotion
+        self.response_state.call_again = call_again
 
     def add_tts_raw_chunk_id(self, chunk_id, llm_sentence_id):
         self.response_state.speech_chunks_per_response[llm_sentence_id] += 1

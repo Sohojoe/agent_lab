@@ -11,6 +11,8 @@ class AgentResponse(dict):
             self['llm_sentences'] = []
             self['tts_raw_chunk_ref'] = None
             self['tts_raw_chunk_id'] = 0
+            self['emotion'] = None
+            self['call_again'] = False
 
     def make_copy(self):
         new_instance = self.__class__.__new__(self.__class__)
