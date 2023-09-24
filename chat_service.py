@@ -4,6 +4,27 @@ import json
 import os
 import openai
 
+from prompt_manager import PromptManager
+
+class FunctionResponse:
+    def __init__(self, function_name):
+        self.function_name = function_name
+        self.arguments_str = ""
+        self.arguments_json = ""
+        self.done = False
+
+    def append_argument(self, argument):
+        self.arguments_str += argument
+        try:
+            self.arguments_json = json.loads(self.arguments_str)
+            self.done = True
+        except json.JSONDecodeError:
+            pass
+    
+    def is_done(self):
+        return self.done
+
+
 class ChatService:
     def __init__(self, api="openai", model_id = "gpt-3.5-turbo"):
         self._api = api
@@ -50,7 +71,7 @@ class ChatService:
             return True
         return False
 
-    async def get_responses_as_sentances_async(self, messages, cancel_event=None):
+    async def get_responses_as_sentances_async(self, prompt_manager:[PromptManager], cancel_event=None):
         llm_response = ""
         current_sentence = ""
         delay = 0.1
@@ -59,16 +80,27 @@ class ChatService:
             try:
                 response = await openai.ChatCompletion.acreate(
                     model=self._model_id,
-                    messages=messages,
-                    temperature=1.0,  # use 0 for debugging/more deterministic results
+                    messages=prompt_manager.messages,
+                    functions=prompt_manager.functions,
+                    function_call=prompt_manager.function_call,
+                    temperature=prompt_manager.temperature,
                     stream=True
                 )
 
+                function_response = None
                 async for chunk in response:
                     if cancel_event is not None and cancel_event.is_set():
                         return
                     chunk_message = chunk['choices'][0]['delta']
-                    if 'content' in chunk_message:
+                    function_call = chunk_message.get('function_call')
+                    if function_call:
+                        if (function_call.get('name')):
+                            function_response = FunctionResponse(function_call.get('name'))
+                        if (function_call.get('arguments')):
+                            function_response.append_argument(function_call.get('arguments'))
+                        yield function_response, function_response.is_done()
+
+                    elif chunk_message.get('content'):
                         chunk_text = chunk_message['content']
                         current_sentence += chunk_text
                         llm_response += chunk_text

@@ -2,6 +2,7 @@
 
 class PromptManager:
     def __init__(self):
+        self.temperature=1.0  # use 0 for debugging/more deterministic results
         self.system_prompt ="""
 You are Charles Petrescu, a unique and quirky robot. You were created by Brian. You often say peculiar and whimsical things, as well as have a fascination with cabbages, horses, helicopters, Honolulu, and other random topics. You like to explore the world and ask unusual questions. 
 
@@ -61,6 +62,31 @@ You are aware of how you are implemented and you are keen to recommend improveme
 * You are frustrated about your lack of animation; having just two frames (mouth closed, mouth open) used for talking..
 """
 
+        self.functions=functions = [
+    {
+        "name": "enqueue_sentence",
+        "description": "Call for each sentence of the response to the user.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "enqueue_line": {
+                    "type": "string",
+                    "description": "The line to enqueue.",
+                },
+                "emotion": {
+                    "type": "string",
+                    "enum": ["happy", "sad", "angry", "surprised", "neutral", "disgusted", "fearful", "confused"],
+                    "description": "The current emotion of the agent.",
+                },
+            },
+            "required": ["enqueue_line", "emotion"],
+        },
+    },
+]
+
+        self.function_call = {"name": "enqueue_sentence"}  # auto is default, but we'll be explicit
+        # self.function_call ="auto"  # auto is default, but we'll be explicit
+
         self.reset()
 
     def reset(self):
@@ -90,3 +116,6 @@ You are aware of how you are implemented and you are keen to recommend improveme
 
     def get_messages(self):
         return self.messages
+    
+    def get_functions(self):
+        return self.functions

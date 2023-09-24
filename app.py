@@ -49,7 +49,7 @@ class Main:
             self.add_output_to_history(f"👨 {prompt}\n")
             self.prompt_manager.replace_or_append_user_message(prompt)
             self.respond_to_prompt = RespondToPromptAsync(self.response_state_manager)
-            self.respond_to_prompt_task = asyncio.create_task(self.respond_to_prompt.run(prompt, self.prompt_manager.messages))
+            self.respond_to_prompt_task = asyncio.create_task(self.respond_to_prompt.run(prompt, self.prompt_manager))
             response_step_obs, response_state = self.response_state_manager.reset_episode()
 
     def add_output_to_history(self, output):
@@ -107,8 +107,7 @@ class Main:
                 self.emit_chat_history(human_preview_text),
                 self.emit_debug(),
                 asyncio.sleep(1 / 30)
-            )            
-
+            )
 
 @app.on_event("startup")
 async def startup_event():
