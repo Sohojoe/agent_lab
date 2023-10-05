@@ -1,6 +1,7 @@
 import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import socketio
 import uvicorn
 
@@ -73,7 +74,13 @@ class Main:
             else:
                 task_status = "running"
         self.debug_info.append(f"self.respond_to_prompt_task: {task_status}")
-        self.debug_info.append(f"state: {self.state}")
+        self.debug_info.append(f"--- state: ---")
+        if isinstance(self.state, BaseModel):
+            state_dict = vars(self.state)
+            for key, value in state_dict.items():
+                self.debug_info.append(f" {key}: {value}")
+        elif isinstance(self.state, str):
+            self.debug_info.append(f" {self.state}")
         self.debug_info.append(f"goal: {self.goal}")
         await sio.emit("update_debug", self.debug_info)
 
@@ -102,14 +109,14 @@ class Main:
             try:
                 eval_service = EvalService()
                 self.state = await eval_service.query_state_async(self.prompt_manager.messages)
-                self.goal = await eval_service.query_goal_async(self.state, self.prompt_manager.messages)
+                # self.goal = await eval_service.query_goal_async(self.state, self.prompt_manager.messages)
 
                 await asyncio.gather(
-                    asyncio.sleep(1)
+                    asyncio.sleep(10)
                 )    
             except Exception as e:
                 print(f"Exception in eval_loop: {e}")
-                await asyncio.sleep(1)
+                await asyncio.sleep(10)
 
     async def main_loop(self):
         while True:
