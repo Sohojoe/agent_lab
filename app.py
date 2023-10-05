@@ -7,6 +7,7 @@ import uvicorn
 from prompt_manager import PromptManager
 from respond_to_prompt import RespondToPromptAsync
 from response_state_manager import ResponseStateManager
+from eval_service import EvalService
 
 
 app = FastAPI()
@@ -31,6 +32,8 @@ class Main:
         self.output_history = []
         self.respond_to_prompt = None
         self.respond_to_prompt_task = None
+        self.state = "n/a"
+        self.goal = "n/a"
 
         @sio.event
         async def connect(sid, environ):
@@ -70,6 +73,8 @@ class Main:
             else:
                 task_status = "running"
         self.debug_info.append(f"self.respond_to_prompt_task: {task_status}")
+        self.debug_info.append(f"state: {self.state}")
+        self.debug_info.append(f"goal: {self.goal}")
         await sio.emit("update_debug", self.debug_info)
 
     async def emit_chat_history(self, human_preview_text):
@@ -91,6 +96,20 @@ class Main:
         if chat_history != self.chat_history:
             await sio.emit("update_chat", chat_history)
         self.chat_history = chat_history
+
+    async def eval_loop(self):
+        while True:
+            try:
+                eval_service = EvalService()
+                self.state = await eval_service.query_state_async(self.prompt_manager.messages)
+                self.goal = await eval_service.query_goal_async(self.state, self.prompt_manager.messages)
+
+                await asyncio.gather(
+                    asyncio.sleep(1)
+                )    
+            except Exception as e:
+                print(f"Exception in eval_loop: {e}")
+                await asyncio.sleep(1)
 
     async def main_loop(self):
         while True:
@@ -114,6 +133,7 @@ class Main:
 async def startup_event():
     main = Main()
     asyncio.create_task(main.main_loop())
+    asyncio.create_task(main.eval_loop())
 
 if __name__ == "__main__":
     uvicorn.run("app:sio_asgi_app", host="0.0.0.0", port=8000, reload=True)
