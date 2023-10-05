@@ -15,12 +15,22 @@ class SetState(BaseModel):
 
     assistant_emotion: str = Field(..., description="Current emotion of the assistant")
     user_emotion: str = Field(..., description="Current emotion of the user from the assistant's perspective")
-    summary: str = Field(..., description="The summary should capture the state of the assitant and their percived understanding of the user")
+    summary: str = Field(..., description="Imagine you are discribing the charicters and situation to someone who has no prior knowledge of who is in the conversation and where it is taking place.")
     conversation_key_beats: str = Field(..., description="Short summary of the key beats of the conversation. This should be from the perspective of the assistant and should just summarise assitant and user conversation")
     assistant_goal: str = Field(..., description="The assistant's goal")
     user_goal: str = Field(..., description="The assistant's perspective of the user's goal")
 
+class Action(BaseModel):
+    """An action that the assistant can take given its current state"""
 
+    action: str = Field(..., description="The action that the assistant can take")
+
+class SetActions(BaseModel):
+    """Given the assitants current state and goal, what actions can the assistant take. 
+    List between 2 and 6 actions. Do not repeate actions.
+    The actions should be a mix of actions that will maximise the assistant's goal and actions that will help the assistant gain more information."""
+
+    actions: Sequence[Action] = Field(..., description="The actions that the assistant can take")
 
 class EvalService:
     def __init__(self, api="openai", model_id = "gpt-3.5-turbo"):
@@ -79,30 +89,30 @@ class EvalService:
             prompt += f"{message}\n"
         return prompt
 
-    async def query_goal_async(self, state:str, messages:[str]):
-        messages = messages.copy()
-        prompt = self.extract_messages_as_prompt(messages)
-        messages = []
-        system_prompt = f"""
-You are to evaluate the assistent's goal given their current state.
+#     async def query_goal_async(self, state:str, messages:[str]):
+#         messages = messages.copy()
+#         prompt = self.extract_messages_as_prompt(messages)
+#         messages = []
+#         system_prompt = f"""
+# You are to evaluate the assistent's goal given their current state.
 
-* role: system = this is the system's prompt for the assistant
-* role: assistant = text spoke by the assistant
-* role: user = text spoken by the user
+# * role: system = this is the system's prompt for the assistant
+# * role: assistant = text spoke by the assistant
+# * role: user = text spoken by the user
 
-respond using json format. for example:
-{{"goal": "make the user laugh"}}
-{{"goal": "spread love and quirky humor"}}
-{{"goal": "get attention from the user"}}
+# respond using json format. for example:
+# {{"goal": "make the user laugh"}}
+# {{"goal": "spread love and quirky humor"}}
+# {{"goal": "get attention from the user"}}
 
-the assistants current state is:{state}
+# the assistants current state is:{state}
 
-"""
-        messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
+# """
+#         messages.append({"role": "system", "content": system_prompt})
+#         messages.append({"role": "user", "content": prompt})
         
-        responce = await self.invoke_llm_async(messages)
-        return responce.content
+#         responce = await self.invoke_llm_async(messages)
+#         return responce.content
     
     async def query_state_async(self, messages):
         messages = messages.copy()
@@ -126,3 +136,24 @@ Tip: Make sure to answer in the correct format
         
         responce = await self.invoke_llm_async(messages, functions)
         return responce
+    
+    async def query_actions_async(self, state):
+        messages = []
+        system_prompt = f"""
+You are a world class algorithm for defining the avaliable actions for the assistant given the current state and goals. 
+The input is the current state including the assistants goal.
+
+* role: system = this is the system's prompt for the assistant
+* role: assistant = text spoke by the assistant
+* role: user = text spoken by the user
+
+Tip: Make sure to answer in the correct format  
+"""
+        messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": f"state: {state}"})
+        functions = [
+            SetActions
+        ]
+        
+        responce = await self.invoke_llm_async(messages, functions)
+        return responce        

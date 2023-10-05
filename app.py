@@ -8,7 +8,7 @@ import uvicorn
 from prompt_manager import PromptManager
 from respond_to_prompt import RespondToPromptAsync
 from response_state_manager import ResponseStateManager
-from eval_service import EvalService
+from eval_service import EvalService, SetActions
 
 
 app = FastAPI()
@@ -34,7 +34,7 @@ class Main:
         self.respond_to_prompt = None
         self.respond_to_prompt_task = None
         self.state = "n/a"
-        self.goal = "n/a"
+        self.actions = None
 
         @sio.event
         async def connect(sid, environ):
@@ -78,10 +78,13 @@ class Main:
         if isinstance(self.state, BaseModel):
             state_dict = vars(self.state)
             for key, value in state_dict.items():
-                self.debug_info.append(f" {key}: {value}")
+                self.debug_info.append(f" - {key}: {value}")
         elif isinstance(self.state, str):
-            self.debug_info.append(f" {self.state}")
-        self.debug_info.append(f"goal: {self.goal}")
+            self.debug_info.append(f" - {self.state}")
+        self.debug_info.append(f"--- actions: ---")
+        if isinstance(self.actions, SetActions):
+            for action in self.actions.actions:
+                self.debug_info.append(f" - {action}")
         await sio.emit("update_debug", self.debug_info)
 
     async def emit_chat_history(self, human_preview_text):
@@ -109,7 +112,7 @@ class Main:
             try:
                 eval_service = EvalService()
                 self.state = await eval_service.query_state_async(self.prompt_manager.messages)
-                # self.goal = await eval_service.query_goal_async(self.state, self.prompt_manager.messages)
+                self.actions = await eval_service.query_actions_async(self.state)
 
                 await asyncio.gather(
                     asyncio.sleep(10)
