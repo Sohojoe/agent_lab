@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,7 +9,7 @@ import uvicorn
 from prompt_manager import PromptManager
 from respond_to_prompt import RespondToPromptAsync
 from response_state_manager import ResponseStateManager
-from eval_service import EvalService, SetActions
+from eval_service import Action, EvalService, SetActions
 
 
 app = FastAPI()
@@ -35,6 +36,11 @@ class Main:
         self.respond_to_prompt_task = None
         self.state = "n/a"
         self.actions = None
+        self.s_u_c = None
+        self.best_action = None
+        self.eval_steps = 0
+        self.assitant_goal = "get the user to speak"
+        self.reward = 0
 
         @sio.event
         async def connect(sid, environ):
@@ -67,6 +73,9 @@ class Main:
         self.debug_info.append(f"---- debug info ----")
         self.debug_info.append(f"episode: {self.response_state_manager.episode}")
         self.debug_info.append(f"step: {self.response_state_manager.step}")
+        self.debug_info.append(f"eval_steps: {self.eval_steps}")
+        self.debug_info.append(f"assitant_goal: {self.assitant_goal}")
+        self.debug_info.append(f"reward: {self.reward}")
         task_status = "n/a"
         if self.respond_to_prompt_task is not None:
             if self.respond_to_prompt_task.done():
@@ -81,10 +90,16 @@ class Main:
                 self.debug_info.append(f" - {key}: {value}")
         elif isinstance(self.state, str):
             self.debug_info.append(f" - {self.state}")
+        self.debug_info.append(f"--- best action: ---")
+        if isinstance(self.best_action, Action):
+            self.debug_info.append(f" - {self.best_action.action}")
         self.debug_info.append(f"--- actions: ---")
-        if isinstance(self.actions, SetActions):
+        if isinstance(self.actions, SetActions) and self.s_u_c:
+            for i, action in enumerate(self.actions.actions):
+                self.debug_info.append(f" - {self.s_u_c[i]} {action.action}")
+        elif isinstance(self.actions, SetActions):
             for action in self.actions.actions:
-                self.debug_info.append(f" - {action}")
+                self.debug_info.append(f" - {action.action}")
         await sio.emit("update_debug", self.debug_info)
 
     async def emit_chat_history(self, human_preview_text):
@@ -110,15 +125,24 @@ class Main:
     async def eval_loop(self):
         while True:
             try:
+                self.eval_steps += 1
                 eval_service = EvalService()
-                self.state = await eval_service.query_state_async(self.prompt_manager.messages)
-                self.actions = await eval_service.query_actions_async(self.state)
+                # self.state = await eval_service.query_state_async(self.prompt_manager.messages)
+                self.reward = await eval_service.estimate_reward(self.prompt_manager.messages, self.assitant_goal)
+                self.best_action = None
+                self.actions = None
+                self.s_u_c = None
+                # self.actions = await eval_service.query_actions_async(self.state)
+                # self.best_action, self.s_u_c = await eval_service.rollout(self.state, self.actions)
 
                 await asyncio.gather(
                     asyncio.sleep(10)
                 )    
             except Exception as e:
+                # trace the exception
                 print(f"Exception in eval_loop: {e}")
+                trace = traceback.format_exc()
+                print(f"trace: {trace}")
                 await asyncio.sleep(10)
 
     async def main_loop(self):
