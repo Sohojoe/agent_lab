@@ -34,12 +34,12 @@ class Main:
         self.output_history = []
         self.respond_to_prompt = None
         self.respond_to_prompt_task = None
-        self.state = "n/a"
+        self.state = None
         self.actions = None
         self.s_u_c = None
         self.best_action = None
         self.eval_steps = 0
-        self.assitant_goal = "get the user to speak"
+        self.assistant_goal = "get the user to speak"
         self.reward = 0
 
         @sio.event
@@ -74,7 +74,7 @@ class Main:
         self.debug_info.append(f"episode: {self.response_state_manager.episode}")
         self.debug_info.append(f"step: {self.response_state_manager.step}")
         self.debug_info.append(f"eval_steps: {self.eval_steps}")
-        self.debug_info.append(f"assitant_goal: {self.assitant_goal}")
+        self.debug_info.append(f"assistant_goal: {self.assistant_goal}")
         self.debug_info.append(f"reward: {self.reward}")
         task_status = "n/a"
         if self.respond_to_prompt_task is not None:
@@ -88,8 +88,6 @@ class Main:
             state_dict = vars(self.state)
             for key, value in state_dict.items():
                 self.debug_info.append(f" - {key}: {value}")
-        elif isinstance(self.state, str):
-            self.debug_info.append(f" - {self.state}")
         self.debug_info.append(f"--- best action: ---")
         if isinstance(self.best_action, Action):
             self.debug_info.append(f" - {self.best_action.action}")
@@ -127,13 +125,17 @@ class Main:
             try:
                 self.eval_steps += 1
                 eval_service = EvalService()
-                # self.state = await eval_service.query_state_async(self.prompt_manager.messages)
-                self.reward = await eval_service.estimate_reward(self.prompt_manager.messages, self.assitant_goal)
-                self.best_action = None
-                self.actions = None
-                self.s_u_c = None
-                # self.actions = await eval_service.query_actions_async(self.state)
-                # self.best_action, self.s_u_c = await eval_service.rollout(self.state, self.actions)
+                self.reward = await eval_service.estimate_reward(self.prompt_manager.messages, self.assistant_goal)
+                if self.reward.reward > 0.8:
+                    self.assistant_goal = "get the user to laugh"
+                else:
+                    self.state = None
+                    self.best_action = None
+                    self.actions = None
+                    self.s_u_c = None
+                    self.state = await eval_service.query_state_async(self.prompt_manager.messages)
+                    self.actions = await eval_service.query_actions_async(self.state, self.assistant_goal)
+                    self.best_action, self.s_u_c = await eval_service.rollout(self.state, self.actions)
 
                 await asyncio.gather(
                     asyncio.sleep(10)

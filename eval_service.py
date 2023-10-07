@@ -91,25 +91,26 @@ class SetUtilityAndConfidence(BaseModel):
 
 
 class EvalService:
-    # def __init__(self, api="openai", model_id = "gpt-3.5-turbo"):
-    def __init__(self, api="openai", model_id = "gpt-4"):
+    def __init__(self, api="openai", fast_model_id = "gpt-3.5-turbo", best_model_id="gpt-4"):
         self._api = api
         openai.api_key = os.getenv("OPENAI_API_KEY")
-        self._model_id = model_id
+        self._fast_model_id = fast_model_id
+        self._best_model_id = best_model_id
 
 
-    async def invoke_llm_async(self, messages, functions, cancel_event=None):
+    async def invoke_llm_async(self, messages, functions, use_best=False, cancel_event=None):
         delay = 0.1
         openai_functions = [convert_pydantic_to_openai_function(f) for f in functions]
         fn_names = [oai_fn["name"] for oai_fn in openai_functions]
         # function_call="auto" if len(functions) > 1 else f"{{'name': '{fn_names[0]}'}}"
         function_call="auto" if len(functions) > 1 else {'name': fn_names[0]}
         # function_call="auto"
+        model_id = self._best_model_id if use_best else self._fast_model_id
 
         while True:
             try:
                 response = await openai.ChatCompletion.acreate(
-                    model=self._model_id,
+                    model=model_id,
                     messages=messages,
                     temperature=0.0,
                     functions=openai_functions,
@@ -172,7 +173,7 @@ class EvalService:
 #         responce = await self.invoke_llm_async(messages)
 #         return responce.content
     
-    async def query_state_async(self, messages):
+    async def query_state_async(self, messages)->SetState:
         messages = messages.copy()
         prompt = self.extract_messages_as_prompt(messages)
         messages = []
@@ -195,7 +196,7 @@ Tip: Make sure to answer in the correct format
         responce = await self.invoke_llm_async(messages, functions)
         return responce
     
-    async def query_actions_async(self, state):
+    async def query_actions_async(self, state, assistant_goal)->SetActions:
         messages = []
         system_prompt = f"""
 You are a world class algorithm for defining the avaliable actions for the assistant given the current state and goals. 
@@ -209,15 +210,16 @@ Tip: Make sure to answer in the correct format
 """
         messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": f"state: {state}"})
+        messages.append({"role": "user", "content": f"assistant_goal: {assistant_goal}"})
         functions = [
             SetActions
         ]
         
-        responce = await self.invoke_llm_async(messages, functions)
+        responce = await self.invoke_llm_async(messages, functions, use_best=True)
         return responce
     
 
-    async def _estimate_state_prime(self, state, action):
+    async def _estimate_state_prime(self, state, action)->EstimateStatePrime:
         messages = []
         system_prompt = f"""
 You are a world class algorithm for estimating the new state given a current state and action.
@@ -259,7 +261,7 @@ Tip: Make sure to answer in the correct format
         return response
 
 
-    async def estimate_reward(self, state, assitant_goal):
+    async def estimate_reward(self, state, assistant_goal)->EstimateReward:
         # if state[0]["role"] == "system":
         #     state = state[1:]
         messages = []
@@ -275,15 +277,15 @@ Tip: Make sure to answer in the correct format
 """
         messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": f"messages: {state}"})
-        messages.append({"role": "user", "content": f"assitant_goal: {assitant_goal}"})
+        messages.append({"role": "user", "content": f"assistant_goal: {assistant_goal}"})
 
         functions = [
             EstimateReward
         ]
-        responce = await self.invoke_llm_async(messages, functions)
+        responce = await self.invoke_llm_async(messages, functions, use_best=True)
         return responce
     
-    async def rollout(self, state, actions, c=5):
+    async def rollout(self, state, actions, c=5)->(Action, list):
         actions = actions.actions
         # done = False
         # while depth > 0 and not done:
