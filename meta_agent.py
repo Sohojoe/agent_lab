@@ -58,7 +58,7 @@ you know nothing about the user yet""",
 
         eval_service = EvalService()
         
-        reward = await eval_service.estimate_reward(state_prime.conversation_history, state_prime.assistant_goal)
+        reward = await eval_service.estimate_reward(state_prime, state_prime.assistant_goal)
         self.debug_strings.append(f"-- reward: {reward.reward}")
         self.debug_strings.append(f"reward debug: reward_function: {reward.reward_function}")
         self.debug_strings.append(f"reward debug: result: {reward.reward_function_result}")
