@@ -146,7 +146,7 @@ class Main:
                     response_preview_text = self.response_state_manager.pretty_print_current_responses()
                     if len(response_preview_text) > 0:
                         self.add_output_to_history(response_preview_text)
-                    self.add_output_to_history(f"🧠 {prompt}")
+                    # self.add_output_to_history(f"🧠 {prompt}")
 
                     self.respond_to_prompt = RespondToPromptAsync(self.response_state_manager)
                     self.respond_to_prompt_task = asyncio.create_task(self.respond_to_prompt.run(prompt, self.prompt_manager.messages))

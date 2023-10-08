@@ -60,15 +60,10 @@ class estimate_reward(BaseModel):
     """Review the state and assistant_goal and estimate the reward using evidence.
     The reward should be from the perspective of the assistant achiving its goal.
     The reward should be in the range -1 to 1.
+    Do not reward partial results. The goal should be achived or not achived or the negative goal achived.
     1 would mean the assistant has achived its goal.
     -1 would mean the assistant has achived the opposite of its goal (a negative outcome)
     Otherwise the reward should be 0.
-
-    positive example:
-      assistant_goal = "make the user laugh"
-      reward_function = "if the has laughed then reward = 1 else reward = 0. if the user has cried then reward = -1"
-      reward_function_result = "I am RewardAgent. I am running reward_function(state, assistant_goal). I reviewing the state for instances of {"role": "user", "content": [evidence of laughing]}. I found "role": "user", "content": "ha ha, you are so funny" so I am setting the reward to 1""}
-      reward = 1
 
     """
 
