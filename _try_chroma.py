@@ -2,6 +2,7 @@ import os
 import chromadb
 from chromadb.utils import embedding_functions
 import uuid
+import numpy as np
 
 
 # client = chromadb.Client()
@@ -10,8 +11,8 @@ client = chromadb.PersistentClient(path=os.path.join(".", "chromadb"))
 
 collection = client.get_or_create_collection(
     name="my_collection",
-    # metadata={"hnsw:space": "l2"}
-    metadata={"hnsw:space": "cosine"} # l2 is the default
+    metadata={"hnsw:space": "l2"}
+    # metadata={"hnsw:space": "cosine"} # l2 is the default
     )
 
 sample_text = [
@@ -19,7 +20,7 @@ sample_text = [
     "I have a dog named Alife",
     "Loba is blind",
     "Loba is missing an eye",
-    "Alfie is cute",
+    "Alfie is a happy dog",
     "Sam is happy",
     "Sam is sad",
     "Sam is hungry",
@@ -51,6 +52,8 @@ def search(query_text, n_results=5):
     print()
 
 def search_embeddings(embeddings, n_results=2):
+    if isinstance(embeddings, np.ndarray):
+        embeddings = embeddings.tolist()
     sorted_results = collection.query(
         query_embeddings=embeddings,
         n_results=n_results,
@@ -70,7 +73,18 @@ search("blind")
 search("my mood")
 
 default_ef = embedding_functions.DefaultEmbeddingFunction()
-search_embeddings(default_ef(["another document"]))
+happy = np.array(default_ef(["happy"]))
+dog = np.array(default_ef(["dog"]))
+alfie = np.array(default_ef(["Alfie"]))
+happy_dog = happy + dog
+happy_dog = happy_dog / np.linalg.norm(happy_dog)
+happy_dog_alfie = happy + dog + alfie
+happy_dog_alfie = happy_dog_alfie / np.linalg.norm(happy_dog_alfie)
 
+search_embeddings(happy)
+search_embeddings(dog)
+search_embeddings(alfie)
+search_embeddings(happy_dog)
+search_embeddings(happy_dog_alfie)
 
 print ("--done--")
