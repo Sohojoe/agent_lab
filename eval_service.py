@@ -9,7 +9,7 @@ from typing import Any, Callable, Optional, Sequence
 
 from langchain_helper import convert_pydantic_to_openai_function, create_instance_from_response
 
-class SetState(BaseModel):
+class set_state(BaseModel):
     """Function to capture the current state of the assistant. 
     The state will form tha observations in a partially observable MDP.
     The state should be from the perspective of the assistant and include the assistant's percived understanding of the user
@@ -31,14 +31,14 @@ class Action(BaseModel):
 
     action: str = Field(..., description="The action that the assistant can take")
 
-class SetActions(BaseModel):
+class set_actions(BaseModel):
     """Given the assitants current state and goal, what actions can the assistant take. 
     List between 2 and 6 actions. Do not repeate actions.
     The actions should be a mix of actions that will maximise the assistant's goal and actions that will help the assistant gain more information."""
 
     actions: Sequence[Action] = Field(..., description="The actions that the assistant can take")
 
-class EstimateStatePrime(BaseModel):
+class estimate_state_prime(BaseModel):
     """Given the assistant's current state and an action, estimate the new state and reward value.
     
     The new state should be from the perspective of the assistant and include the assistant's percived understanding of the user.
@@ -56,7 +56,7 @@ class EstimateStatePrime(BaseModel):
     user_goal: str = Field(..., description="The assistant's perspective of the user's goal")
     reward: float = Field(..., description="The reward for the assistant given the current state and goal")
 
-class EstimateReward(BaseModel):
+class estimate_reward(BaseModel):
     """Review the state and assistant_goal and estimate the reward using evidence.
     The reward should be from the perspective of the assistant achiving its goal.
     The reward should be in the range -1 to 1.
@@ -76,10 +76,11 @@ class EstimateReward(BaseModel):
     reward_function_result: str = Field(..., description="I am RewardAgent, a world class algorithm for estimating the reward for a state given the assistant_goal. I am executing reward_function(). As i evaluate the state I see...")
     reward: float = Field(..., description="The reward for the assistant given the current state and goal")
 
+    # This should be from the perspective of the assistant achiving the assistant_goal.
 
-class SetUtilityAndConfidence(BaseModel):
+class set_utility_and_confidence(BaseModel):
     """Estimate the utility and confidence of taking a given action in a given state.
-    This should be from the perspective of the assistant achiving its goal.
+    This should be from the perspective of the assistant achiving the assistant_goal.
     The utility and confidence should be in the range 1 to 10, do not use round numbers.
     """
     # utility_chain_of_thought: str = Field(..., description="Break down your thinking on how to arrive at the utility estimation for the assistant taking the action in the current state towards the assistant's goal")
@@ -173,7 +174,7 @@ class EvalService:
 #         responce = await self.invoke_llm_async(messages)
 #         return responce.content
     
-    async def query_state_async(self, messages)->SetState:
+    async def query_state_async(self, messages)->set_state:
         messages = messages.copy()
         prompt = self.extract_messages_as_prompt(messages)
         messages = []
@@ -190,13 +191,13 @@ Tip: Make sure to answer in the correct format
         messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
         functions = [
-            SetState
+            set_state
         ]
         
         responce = await self.invoke_llm_async(messages, functions)
         return responce
     
-    async def query_actions_async(self, state, assistant_goal)->SetActions:
+    async def query_actions_async(self, state, assistant_goal)->set_actions:
         messages = []
         system_prompt = f"""
 You are a world class algorithm for defining the avaliable actions for the assistant given the current state and goals. 
@@ -212,14 +213,14 @@ Tip: Make sure to answer in the correct format
         messages.append({"role": "user", "content": f"state: {state}"})
         messages.append({"role": "user", "content": f"assistant_goal: {assistant_goal}"})
         functions = [
-            SetActions
+            set_actions
         ]
         
         responce = await self.invoke_llm_async(messages, functions, use_best=True)
         return responce
     
 
-    async def _estimate_state_prime(self, state, action)->EstimateStatePrime:
+    async def _estimate_state_prime(self, state, action)->estimate_state_prime:
         messages = []
         system_prompt = f"""
 You are a world class algorithm for estimating the new state given a current state and action.
@@ -235,15 +236,16 @@ Tip: Make sure to answer in the correct format
         messages.append({"role": "user", "content": f"state: {state}\n\naction: {action}"})        
 
         functions = [
-            EstimateStatePrime
+            estimate_state_prime
         ]
         responce = await self.invoke_llm_async(messages, functions)
         return responce
 
-    async def _estimate_utility_and_confidence(self, state, action):
+    async def _estimate_utility_and_confidence(self, state, action)->set_utility_and_confidence:
         messages = []
         system_prompt = f"""
-You are a world class algorithm for estimating both the utility and confidence of taking a given action in a given state.
+You are a world class algorithm for estimating both the utility and confidence given a state, action pair.
+The utility is based on how likley the action will result in achiving the assistant_goal.
 
 * "role": "system", "content": prompt used by the llm to take on a personality
 * "role": "assistant", "content": text spoken by the assistant
@@ -255,13 +257,13 @@ Tip: Make sure to answer in the correct format
         messages.append({"role": "user", "content": f"state: {state}, action: {action}"})        
 
         functions = [
-            SetUtilityAndConfidence
+            set_utility_and_confidence
         ]
         response = await self.invoke_llm_async(messages, functions)
         return response
 
 
-    async def estimate_reward(self, state, assistant_goal)->EstimateReward:
+    async def estimate_reward(self, state, assistant_goal)->estimate_reward:
         # if state[0]["role"] == "system":
         #     state = state[1:]
         messages = []
@@ -280,12 +282,12 @@ Tip: Make sure to answer in the correct format
         messages.append({"role": "user", "content": f"assistant_goal: {assistant_goal}"})
 
         functions = [
-            EstimateReward
+            estimate_reward
         ]
         responce = await self.invoke_llm_async(messages, functions, use_best=True)
         return responce
     
-    async def rollout(self, state, actions, c=5)->(Action, list):
+    async def rollout(self, state, actions, c=5.)->(Action, list):
         actions = actions.actions
         # done = False
         # while depth > 0 and not done:

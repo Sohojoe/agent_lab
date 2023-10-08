@@ -10,9 +10,12 @@ class ChatService:
         openai.api_key = os.getenv("OPENAI_API_KEY")
         self._model_id = model_id
 
-    def _should_we_send_to_voice(self, sentence):
+    def _should_we_send_to_voice(self, sentence:str):
         sentence_termination_characters = [".", "?", "!"]
         close_brackets = ['"', ')', ']']
+
+        if sentence is None or sentence.isspace():
+            return None
 
         temination_charicter_present = any(c in sentence for c in sentence_termination_characters)
  
@@ -31,6 +34,8 @@ class ChatService:
         termination_indices = [sentence.rfind(char) for char in sentence_termination_characters]
         # Filter out termination indices that are not followed by whitespace or end of string
         termination_indices = [i for i in termination_indices if sentence[i+1].isspace()]
+        if len(termination_indices) == 0:
+            return None
         last_termination_index = max(termination_indices)
         # handle case of close bracket
         while last_termination_index+1 < len(sentence) and sentence[last_termination_index+1] in close_brackets:

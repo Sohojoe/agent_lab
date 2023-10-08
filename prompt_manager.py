@@ -67,26 +67,31 @@ You are aware of how you are implemented and you are keen to recommend improveme
         self.messages = []
         if self.system_prompt:
             self.messages.append({"role": "system", "content": self.system_prompt})
+        self.force_next_new_message = False
 
     def append_user_message(self, message):
         if len(self.messages) > 0 and self.messages[-1]["role"] == "user":
             self.messages[-1]["content"] += message
         else:
-            self.messages.append({"role": "user", "content": message})        
+            self.messages.append({"role": "user", "content": message})
 
     def replace_or_append_user_message(self, message):
         if len(self.messages) > 0 and self.messages[-1]["role"] == "user":
             self.messages[-1]["content"] = message
         else:
-            self.messages.append({"role": "user", "content": message})        
+            self.messages.append({"role": "user", "content": message})
 
-
-    def append_assistant_message(self, message):
+    def append_assistant_message(self, message, force_new_message=False):
         # check if last message was from assistant, if so append to that message
-        if len(self.messages) > 0 and self.messages[-1]["role"] == "assistant":
+        if len(self.messages) > 0 \
+                and self.messages[-1]["role"] == "assistant" \
+                and not self.force_next_new_message \
+                and not force_new_message:
             self.messages[-1]["content"] += message
+            self.force_next_new_message = False
         else:
             self.messages.append({"role": "assistant", "content": message})
+            self.force_next_new_message = force_new_message
 
     def get_messages(self):
         return self.messages

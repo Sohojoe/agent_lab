@@ -5,11 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import socketio
 import uvicorn
+from meta_agent import MetaAgent
 
 from prompt_manager import PromptManager
 from respond_to_prompt import RespondToPromptAsync
 from response_state_manager import ResponseStateManager
-from eval_service import Action, EvalService, SetActions
+from eval_service import Action, EvalService, set_actions
 
 
 app = FastAPI()
@@ -26,7 +27,7 @@ app.add_middleware(
 
 class Main:
     def __init__(self):
-        self.chat_history = []
+        self.chat_history = ["lazy init"]
         self.debug_info = []
         self.user_typing_feed = ""
         self.response_state_manager = ResponseStateManager()
@@ -34,13 +35,7 @@ class Main:
         self.output_history = []
         self.respond_to_prompt = None
         self.respond_to_prompt_task = None
-        self.state = None
-        self.actions = None
-        self.s_u_c = None
-        self.best_action = None
-        self.eval_steps = 0
-        self.assistant_goal = "get the user to speak"
-        self.reward = 0
+        self.meta_agent = MetaAgent()
 
         @sio.event
         async def connect(sid, environ):
@@ -73,31 +68,18 @@ class Main:
         self.debug_info.append(f"---- debug info ----")
         self.debug_info.append(f"episode: {self.response_state_manager.episode}")
         self.debug_info.append(f"step: {self.response_state_manager.step}")
-        self.debug_info.append(f"eval_steps: {self.eval_steps}")
-        self.debug_info.append(f"assistant_goal: {self.assistant_goal}")
-        self.debug_info.append(f"reward: {self.reward}")
         task_status = "n/a"
         if self.respond_to_prompt_task is not None:
             if self.respond_to_prompt_task.done():
                 task_status = "done"
             else:
                 task_status = "running"
-        self.debug_info.append(f"self.respond_to_prompt_task: {task_status}")
-        self.debug_info.append(f"--- state: ---")
-        if isinstance(self.state, BaseModel):
-            state_dict = vars(self.state)
-            for key, value in state_dict.items():
-                self.debug_info.append(f" - {key}: {value}")
-        self.debug_info.append(f"--- best action: ---")
-        if isinstance(self.best_action, Action):
-            self.debug_info.append(f" - {self.best_action.action}")
-        self.debug_info.append(f"--- actions: ---")
-        if isinstance(self.actions, SetActions) and self.s_u_c:
-            for i, action in enumerate(self.actions.actions):
-                self.debug_info.append(f" - {self.s_u_c[i]} {action.action}")
-        elif isinstance(self.actions, SetActions):
-            for action in self.actions.actions:
-                self.debug_info.append(f" - {action.action}")
+        self.debug_info.append(f"respond_to_prompt_task: {task_status}")
+
+        self.debug_info.append(f"---- MetaAgent debug info ----")
+        self.debug_info.append(f"best_action: {self.meta_agent.best_action}")
+        for debug_string in self.meta_agent.debug_strings:
+            self.debug_info.append(debug_string)
         await sio.emit("update_debug", self.debug_info)
 
     async def emit_chat_history(self, human_preview_text):
@@ -115,7 +97,10 @@ class Main:
         for item in list_of_strings:
             lines = item.split('\n')
             for line in lines:
-                chat_history.append(line)
+                if len(line) > 0:
+                    chat_history.append(line)
+        if len(chat_history) == 0:
+            chat_history = ["...waiting..."]
         if chat_history != self.chat_history:
             await sio.emit("update_chat", chat_history)
         self.chat_history = chat_history
@@ -123,19 +108,7 @@ class Main:
     async def eval_loop(self):
         while True:
             try:
-                self.eval_steps += 1
-                eval_service = EvalService()
-                self.reward = await eval_service.estimate_reward(self.prompt_manager.messages, self.assistant_goal)
-                if self.reward.reward > 0.8:
-                    self.assistant_goal = "get the user to laugh"
-                else:
-                    self.state = None
-                    self.best_action = None
-                    self.actions = None
-                    self.s_u_c = None
-                    self.state = await eval_service.query_state_async(self.prompt_manager.messages)
-                    self.actions = await eval_service.query_actions_async(self.state, self.assistant_goal)
-                    self.best_action, self.s_u_c = await eval_service.rollout(self.state, self.actions)
+                await self.meta_agent.step_async(self.prompt_manager.messages)
 
                 await asyncio.gather(
                     asyncio.sleep(10)
@@ -148,15 +121,36 @@ class Main:
                 await asyncio.sleep(10)
 
     async def main_loop(self):
+        prior_meta_agent_best_action = None
         while True:
             response_step_obs, response_state = self.response_state_manager.begin_next_step()
+            should_review_meta_agent = True
             prompt = self.user_typing_feed
             human_preview_text = ""
             if len(prompt):
                 human_preview_text = f"👨❓ {prompt}"
+                should_review_meta_agent = False
 
             for new_response in response_step_obs.llm_responses:
                 self.prompt_manager.append_assistant_message(new_response)
+                should_review_meta_agent = False
+
+            if self.respond_to_prompt_task is not None and not self.respond_to_prompt_task.done():
+                should_review_meta_agent = False
+
+            if should_review_meta_agent:
+                if self.meta_agent.best_action is not None and self.meta_agent.best_action != prior_meta_agent_best_action:
+                    prior_meta_agent_best_action = self.meta_agent.best_action
+                    prompt = f"Thought: {self.meta_agent.best_action}"
+                    self.prompt_manager.append_assistant_message(prompt, force_new_message=True)
+                    response_preview_text = self.response_state_manager.pretty_print_current_responses()
+                    if len(response_preview_text) > 0:
+                        self.add_output_to_history(response_preview_text)
+                    self.add_output_to_history(f"🧠 {prompt}")
+
+                    self.respond_to_prompt = RespondToPromptAsync(self.response_state_manager)
+                    self.respond_to_prompt_task = asyncio.create_task(self.respond_to_prompt.run(prompt, self.prompt_manager.messages))
+                    response_step_obs, response_state = self.response_state_manager.reset_episode()
 
             await asyncio.gather(
                 self.emit_chat_history(human_preview_text),
