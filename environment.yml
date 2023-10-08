@@ -21,7 +21,7 @@ dependencies:
     # - elevenlabs==0.2.26
     # - ray[default]==2.6.3
     # - ray==2.6.3
-    - fastapi
-    - python-socketio
-    - uvicorn
+    - fastapi==0.103.1
+    - python-socketio==5.9.0
+    - uvicorn==0.23.2
 
