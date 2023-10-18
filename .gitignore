@@ -4,3 +4,4 @@ __pycache__
 profile.html
 profile.json
 chromadb/
+vector_db/
