@@ -129,8 +129,8 @@ The response should be in the form of a json list:
 
 import os
 import openai
-model_id = "gpt-3.5-turbo"
-# model_id = "gpt-4"
+# model_id = "gpt-3.5-turbo"
+model_id = "gpt-4"
 api_key = os.getenv("OPENAI_API_KEY")
 
 async def create_catogory_async(messages):
