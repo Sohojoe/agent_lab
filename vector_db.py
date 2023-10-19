@@ -22,6 +22,7 @@ class VectorDB:
     def initialize(self):
         if self.beliefs_and_desires_collection.count() == 0:
             self.init_beilefs_and_desires()
+        self._embedding_size = len(self.embed(["test"])[0])
         self._initialized = True
    
     def init_beilefs_and_desires(self):
@@ -69,6 +70,10 @@ class VectorDB:
                 raise e
         print()
 
+    def get_embedding_size(self):
+        assert self._initialized, "VectorDB not initialized. Call initialize() first."
+        return self._embedding_size
+
     def search(self, query_text, n_results=5, prior_category=None, prior_type=None):
         assert self._initialized, "VectorDB not initialized. Call initialize() first."
         assert prior_category is None and prior_type is None, "Not implemented yet."
@@ -77,6 +82,15 @@ class VectorDB:
             n_results=n_results,
         )
         return sorted_results
+    
+    def embeddings_search(self, embeddings, n_results=5, where:chromadb.Where = None):
+        assert self._initialized, "VectorDB not initialized. Call initialize() first."
+        sorted_results = self.beliefs_and_desires_collection.query(
+            query_embeddings=embeddings,
+            n_results=n_results,
+            where=where
+        )
+        return sorted_results    
 
 if __name__ == "__main__":
     vector_db = VectorDB()
