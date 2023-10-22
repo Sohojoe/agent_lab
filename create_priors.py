@@ -48,7 +48,7 @@ The assistant is aware of how it was implemented and is are keen to recommend im
 * You are frustrated about your lack of animation; having just two frames (mouth closed, mouth open) used for talking..
 """
 
-beleif_categories = {
+belief_categories = {
     "Empirical Beliefs": """
 Objective facts and data the assitant knows about the itsself, its capabiltieism the user and world knowlege.
 Examples: "It is raining outside", "Chocolate is sweet".
@@ -179,8 +179,8 @@ async def run_catogory_async(categories, file_name):
         pretty_dump = json.dumps(output_json, indent=4)
         messages.append({"role": "assistant", "content": pretty_dump})
         items[category] = output_json
-        for beleif in output_json:
-            print (beleif)
+        for belief in output_json:
+            print (belief)
         print ()
     if not os.path.exists('priors'):
         os.makedirs('priors')
@@ -190,7 +190,7 @@ async def run_catogory_async(categories, file_name):
 
 
 async def run_all():
-    await run_catogory_async(beleif_categories, 'beliefs.json')
+    await run_catogory_async(belief_categories, 'beliefs.json')
     await run_catogory_async(desire_categories, 'desires.json')
 
 

@@ -1,6 +1,6 @@
 import uuid
 import numpy as np
-from create_priors import beleif_categories, desire_categories
+from create_priors import belief_categories, desire_categories
 from vector_db import VectorDB
 
 class Observation:
@@ -85,9 +85,11 @@ class GenerativeModel:
             self.observations.discard(observation)
 
     def drop_observation_by_document(self, document: str):
+        observations_to_remove = set()
         for observation in self.observations:
             if observation.document == document:
-                self.observations.discard(observation)
+                observations_to_remove.add(observation)
+        self.observations -= observations_to_remove
     
     def add_observation(self, document:str):
         metadata = {
@@ -112,15 +114,15 @@ class GenerativeModel:
         return self.observations
         
     
-def GenerativeModelFactory():
-    # belief_categories = beleif_categories
+def GenerativeModelFactory(empty=False):
+    # belief_categories = belief_categories
     # desire_categories = desire_categories
-    total_min_entries = 30
-    min_entries_per_belief_category = 2
-    min_entries_per_desire_category = 2
+    total_min_entries = 0 if empty else 30
+    min_entries_per_belief_category = 0 if empty else 2
+    min_entries_per_desire_category = 0 if empty else 2
     vector_db = VectorDB()
     vector_db.initialize()
-    generative_model = GenerativeModel(vector_db, beleif_categories, desire_categories, total_min_entries, min_entries_per_belief_category, min_entries_per_desire_category)
+    generative_model = GenerativeModel(vector_db, belief_categories, desire_categories, total_min_entries, min_entries_per_belief_category, min_entries_per_desire_category)
     generative_model.populate()
     
     return generative_model
