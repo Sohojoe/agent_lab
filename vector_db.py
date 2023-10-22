@@ -90,7 +90,12 @@ class VectorDB:
             n_results=n_results,
             where=where
         )
-        return sorted_results    
+        return sorted_results
+    
+    def get_embeddings(self, document:str):
+        assert self._initialized, "VectorDB not initialized. Call initialize() first."
+        embeddings = self.embed(document)
+        return embeddings
 
 if __name__ == "__main__":
     vector_db = VectorDB()

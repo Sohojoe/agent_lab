@@ -42,8 +42,12 @@ class MetaAgent(BaseModel):
 
         self.debug_strings.append(f"--- update model ---")
         model_updates = await active_inference_service.update_generative_model(sensor_stream, self.generative_model, self.current_policy)
-        for belief_update in model_updates.modify_beliefs:
-            self.debug_strings.append(f"belief_update: {belief_update}")
+        for belief in model_updates.add_beliefs:
+            self.debug_strings.append(f" add: {belief.beleif}")
+        for belief in model_updates.delete_beliefs:
+            self.debug_strings.append(f" add: {belief.beleif}")
+        for belief in model_updates.edit_beliefs:
+            self.debug_strings.append(f" update: {belief.old_beleif} -> {belief.new_beleif}")
         self.debug_strings.append(f"policy_is_complete: {model_updates.policy_is_complete}")
         
 

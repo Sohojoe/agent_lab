@@ -1,3 +1,4 @@
+import uuid
 import numpy as np
 from create_priors import beleif_categories, desire_categories
 from vector_db import VectorDB
@@ -10,7 +11,7 @@ class Observation:
         self.document = document
         self.embedding = embedding
         self.type = metadata['prior_type']
-        self.category = metadata['prior_category']
+        self.category = metadata.get('prior_category', None)
 
     def __hash__(self):
         return hash(self.id)
@@ -82,6 +83,30 @@ class GenerativeModel:
     def drop_observations(self, observations: list[Observation]):
         for observation in observations:
             self.observations.discard(observation)
+
+    def drop_observation_by_document(self, document: str):
+        for observation in self.observations:
+            if observation.document == document:
+                self.observations.discard(observation)
+    
+    def add_observation(self, document:str):
+        metadata = {
+            "prior_type": 'belief'
+        }
+        embedding = self.vector_db.get_embeddings([document])[0]
+        observation = Observation(
+            id=str(uuid.uuid4()),
+            distance=0,
+            metadata=metadata,
+            document=document,
+            embedding=embedding
+        )
+        self.observations.add(observation)
+
+    def edit_observation_by_document(self, old_document:str, new_document:str):
+        for observation in self.observations:
+            if observation.document == old_document:
+                observation.document = new_document
 
     def get_observations(self)->list[Observation]:
         return self.observations

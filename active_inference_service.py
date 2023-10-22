@@ -104,8 +104,14 @@ Tip: Make sure to answer in the correct format
         functions = [
             update_generative_model_fn
         ]
-        responce = await self.invoke_llm_async(messages, functions, use_best=True)
-        return responce
+        updates = await self.invoke_llm_async(messages, functions, use_best=True)
+        for belief in updates.add_beliefs:
+            generative_model.add_observation(belief.beleif)
+        for belief in updates.delete_beliefs:
+            generative_model.drop_observation_by_document(belief.belief)
+        for belief in updates.edit_beliefs:
+            generative_model.edit_observation_by_document(belief.old_beleif, belief.new_beleif)
+        return updates
 
 class Policy(BaseModel):
     """A set of actions the assistant takes to reduce free energy"""
@@ -114,16 +120,25 @@ class Policy(BaseModel):
     estimated_free_energy_reduction: float = Field(...,  description= "how much free energy the policy will remove from the system. int between 1 and 10")
     probability_of_success: float = Field(...,  description= "how likley the assistant is to succeed with this policy, between 0 and 1")
 
-class EditBelifActionEnum(str, Enum):
-    create = "create"
-    edit = "edit"
-    delete = "delete"
+# class EditBelifActionEnum(str, Enum):
+#     create = "create"
+#     edit = "edit"
+#     delete = "delete"
+
+
+class AddBeleif(BaseModel):
+    """Create a beleif"""
+    beleif: str = Field(..., description="something the assistent beleives about themselves, the user, or the world")
+
+class DeleteBeleif(BaseModel):
+    """Delete a beleif"""
+    beleif: str = Field(None, description="belief to detele. MUST match an existing beleif")
+
 
 class EditBeleif(BaseModel):
     """Edit, create, or delete a beleif"""
     new_beleif: str = Field(..., description="something the assistent beleives about themselves, the user, or the world")
-    action: EditBelifActionEnum = Field(..., description="create, edit, or delete")
-    old_beleif: Optional[str] = Field(None, description="Required for edit. MUST match an existing beleif")
+    old_beleif: str = Field(None, description="belief to update. MUST match an existing beleif")
 
 class PolicyIsCompleteEnum(str, Enum):
     """Is the policy complete? Should the assistant continue or interrupt?"""
@@ -137,5 +152,7 @@ class update_generative_model_fn(BaseModel):
     #2 evaluate if the policy is complete or should be interrupted and new policies evaluated.
     """
 
-    modify_beliefs: Optional[List[EditBeleif]] = Field(..., description="list of beleifs to modify")
+    add_beliefs: Optional[List[AddBeleif]] = Field(..., description="list of new beleifs")
+    delete_beliefs: Optional[List[DeleteBeleif]] = Field(..., description="list of beleifs to delete")
+    edit_beliefs: Optional[List[EditBeleif]] = Field(..., description="list of beleifs to edit")
     policy_is_complete: PolicyIsCompleteEnum = Field(..., description="Determines if the policy is complete or should be interrupted and new policies evaluated.")
