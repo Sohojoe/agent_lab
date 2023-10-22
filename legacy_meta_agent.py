@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Dict
 
-from eval_service import EvalService, Action
+from legacy_eval_service import EvalService, Action
 
 
 class MetaAgentState(BaseModel):
