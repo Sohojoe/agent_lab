@@ -123,7 +123,7 @@ class Main:
                 await asyncio.sleep(10)
 
     async def main_loop(self):
-        prior_meta_agent_best_action = None
+        prior_meta_agent_policy = None
         while True:
             response_step_obs, response_state = self.response_state_manager.begin_next_step()
             should_review_meta_agent = True
@@ -141,20 +141,20 @@ class Main:
             if self.respond_to_prompt_task is not None and not self.respond_to_prompt_task.done():
                 should_review_meta_agent = False
 
-            # if should_review_meta_agent:
-            #     if self.meta_agent.best_action is not None and self.meta_agent.best_action != prior_meta_agent_best_action:
-            #         prior_meta_agent_best_action = self.meta_agent.best_action
-            #         prompt = f"Thought: {self.meta_agent.best_action}"
-            #         self.prompt_manager.append_assistant_message(prompt, force_new_message=True)
-            #         self.sensory_stream.append_assistant_message(prompt)
-            #         response_preview_text = self.response_state_manager.pretty_print_current_responses()
-            #         if len(response_preview_text) > 0:
-            #             self.add_output_to_history(response_preview_text)
-            #         # self.add_output_to_history(f"🧠 {prompt}")
+            if should_review_meta_agent:
+                if self.meta_agent.current_policy is not None and self.meta_agent.current_policy != prior_meta_agent_policy:
+                    prior_meta_agent_policy = self.meta_agent.current_policy
+                    prompt = f"Thought, my goal is: {self.meta_agent.current_policy.policy}]"
+                    self.prompt_manager.append_assistant_message(prompt, force_new_message=True)
+                    # self.sensory_stream.append_assistant_message(prompt)
+                    response_preview_text = self.response_state_manager.pretty_print_current_responses()
+                    if len(response_preview_text) > 0:
+                        self.add_output_to_history(response_preview_text)
+                    # self.add_output_to_history(f"🧠 {prompt}")
 
-            #         self.respond_to_prompt = RespondToPromptAsync(self.response_state_manager)
-            #         self.respond_to_prompt_task = asyncio.create_task(self.respond_to_prompt.run(prompt, self.prompt_manager.messages))
-            #         response_step_obs, response_state = self.response_state_manager.reset_episode()
+                    self.respond_to_prompt = RespondToPromptAsync(self.response_state_manager)
+                    self.respond_to_prompt_task = asyncio.create_task(self.respond_to_prompt.run(prompt, self.prompt_manager.messages))
+                    response_step_obs, response_state = self.response_state_manager.reset_episode()
 
             await asyncio.gather(
                 self.emit_chat_history(human_preview_text),

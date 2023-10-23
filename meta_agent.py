@@ -50,12 +50,12 @@ class MetaAgent(BaseModel):
             self.debug_strings.append(f"--- updating model...")
             model_updates = await active_inference_service.update_generative_model(sensor_stream, self.generative_model, self.current_policy)
             for belief in model_updates.add_beliefs:
-                self.debug_strings.append(f" add: {belief.belief}")
+                self.debug_strings.append(f" - add: {belief.belief}")
             for belief in model_updates.delete_beliefs:
-                self.debug_strings.append(f" add: {belief.belief}")
+                self.debug_strings.append(f" - delete: {belief.belief}")
             for belief in model_updates.edit_beliefs:
-                self.debug_strings.append(f" update: {belief.old_belief} -> {belief.new_belief}")
-            self.debug_strings.append(f"policy_is_complete: {model_updates.policy_is_complete}")
+                self.debug_strings.append(f" - update: {belief.old_belief} -> {belief.new_belief}")
+            self.debug_strings.append(f" - {model_updates.policy_is_complete}")
             if model_updates.policy_is_complete == PolicyIsCompleteEnum.complete or \
                     model_updates.policy_is_complete == PolicyIsCompleteEnum.interrupt_policy:
                 self.current_policy = None
