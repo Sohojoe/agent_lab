@@ -38,7 +38,7 @@ class ActiveInferenceService:
                 response = await openai.ChatCompletion.acreate(
                     model=model_id,
                     messages=messages,
-                    temperature=0.0,
+                    temperature=1.0,
                     functions=openai_functions,
                     function_call=function_call,
                     stream=False
@@ -179,9 +179,9 @@ class update_generative_model_fn(BaseModel):
     #2 evaluate if the policy is complete or should be interrupted and new policies evaluated.
     """
 
-    add_beliefs: Optional[List[AddBelief]] = Field(..., description="list of new beliefs")
-    delete_beliefs: Optional[List[DeleteBelief]] = Field(..., description="list of beliefs to delete")
-    edit_beliefs: Optional[List[EditBelief]] = Field(..., description="list of beliefs to edit")
+    add_beliefs: Optional[List[AddBelief]] = Field(..., description="only add new beliefs if they are unqiue and do not contradict the fixed weights")
+    delete_beliefs: Optional[List[DeleteBelief]] = Field(..., description="delete beliefs that are no longer relevant or are repetative")
+    edit_beliefs: Optional[List[EditBelief]] = Field(..., description="update beliefs that have changed")
     policy_is_complete: PolicyIsCompleteEnum = Field(..., description="Determines if the policy is complete or should be interrupted and new policies evaluated.")
 
 
