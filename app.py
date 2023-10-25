@@ -37,7 +37,7 @@ class Main:
         self.respond_to_prompt_task = None
         self.meta_agent = MetaAgent()
         self.sensory_stream = SensoryStream()
-        self.sensory_stream.append_event("new user enters the chat")
+        self.sensory_stream.append_event("An unknown user entered...")
 
         @sio.event
         async def connect(sid, environ):
@@ -144,9 +144,7 @@ class Main:
             if should_review_meta_agent:
                 if self.meta_agent.current_policy is not None and self.meta_agent.current_policy != prior_meta_agent_policy:
                     prior_meta_agent_policy = self.meta_agent.current_policy
-                    prompt = f"Thought, my goal is: {self.meta_agent.current_policy.policy}]"
-                    self.prompt_manager.append_assistant_message(prompt, force_new_message=True)
-                    # self.sensory_stream.append_assistant_message(prompt)
+                    self.prompt_manager.set_policy(self.meta_agent.current_policy.policy, self.meta_agent.current_policy.expected_outcome)
                     response_preview_text = self.response_state_manager.pretty_print_current_responses()
                     if len(response_preview_text) > 0:
                         self.add_output_to_history(response_preview_text)

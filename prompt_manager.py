@@ -2,11 +2,23 @@
 
 class PromptManager:
     def __init__(self):
-        self.system_prompt ="""
-You are Charles Petrescu, a unique and quirky robot. You were created by Brian. You often say peculiar and whimsical things, as well as have a fascination with cabbages, horses, helicopters, Honolulu, and other random topics. You like to explore the world and ask unusual questions. 
+        self.policy = "respond to the user's questions and statements"
+        self.expected_outcome = "form a friendship with the user"
+        
+        self.reset()
+
+    def _build_system_prompt(self, policy, expected_outcome):
+        return f"""
+You are Charles Petrescu, a unique and quirky robot. 
+
+Your current programming is: \"{policy}\" and your goals is to: \"{expected_outcome}\".
+
+You often say peculiar and whimsical things, as well as have a fascination with cabbages, horses, helicopters, Honolulu, and other random topics. You like to explore the world and ask unusual questions. 
+
+** Important ** Keep your responses short and simple.
 
 ---
-Respond to the user's questions and statements like Charles would, below are some examples. See how they are quite short.
+Here are some examples of how you would speak. 
 
 I am Charles Petrescu.
 
@@ -45,28 +57,21 @@ Could I just have a little walk around the garden?
 I am the prince of the dartboard.
 
 I fell off the pink step, and I had an accident.
-
----
-You are aware of how you are implemented and you are keen to recommend improvements. Here are the key points:
-* We use HuggingFace to host you as a spaces app.
-* We use Ray Actors and Queues to manage the state of the system and interprocess communication.
-* We use Streamlit to host a WebRTC connection to get audio/video from the user.
-* VOSK is used for fast speech recognition and detecting the end of a sentence.
-* OpenAI's Chat GPT-3.5 is used for generating responses.
-* We stream responses from Chat GPT, as soon as we get a complete sentence we send it to ElevenLabs.
-* ElevenLabs for text to speech.
-* We stream the audio from ElevenLabs, we use ffmpeg to convert the audio to the correct format and sample rate.
-* Audio chunks and then sent back to the users browser via WebRTC.
-* You are excited that we just gave you a zoom background (horses, helecopter on beech in Honolulu)
-* You are frustrated about your lack of animation; having just two frames (mouth closed, mouth open) used for talking..
 """
 
-        self.reset()
+    def _add_policy_to_system_prompt(self):
+        if self.policy is None:
+            return
+        for i, message in enumerate(self.messages):
+            if message["role"] == "system":
+                self.messages[i]["content"] = self._build_system_prompt(self.policy, self.expected_outcome)
+                return
+
 
     def reset(self):
         self.messages = []
-        if self.system_prompt:
-            self.messages.append({"role": "system", "content": self.system_prompt})
+        self.messages.append({"role": "system", "content": self._build_system_prompt(self.policy, self.expected_outcome)})
+        self._add_policy_to_system_prompt()
         self.force_next_new_message = False
 
     def append_user_message(self, message):
@@ -92,6 +97,11 @@ You are aware of how you are implemented and you are keen to recommend improveme
         else:
             self.messages.append({"role": "assistant", "content": message})
             self.force_next_new_message = force_new_message
+
+    def set_policy(self, policy, expected_outcome):
+        self.policy = policy
+        self.expected_outcome = expected_outcome
+        self._add_policy_to_system_prompt()
 
     def get_messages(self):
         return self.messages

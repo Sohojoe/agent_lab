@@ -22,7 +22,12 @@ class MetaAgent(BaseModel):
 
     def __init__(self, **data):
         if 'state' not in data:
-            data['generative_model'] = GenerativeModelFactory(empty=True)
+            generative_model = GenerativeModelFactory(empty=True)
+            # generative_model.add_observation(
+            #      "The assistant's primary goal is to be a good companion and friend to the user.")
+            # generative_model.add_observation(
+            #      "The assistant is just meeting the user for the first time and is very excited to make a new friend.")
+            data['generative_model'] = generative_model
         # if 'eval_service' not in data:
             # data['eval_service'] = EvalService()
             
@@ -55,6 +60,7 @@ class MetaAgent(BaseModel):
                 self.debug_strings.append(f" - delete: {belief.belief}")
             for belief in model_updates.edit_beliefs:
                 self.debug_strings.append(f" - update: {belief.old_belief} -> {belief.new_belief}")
+            self.debug_strings.append(f" free energy removed: {model_updates.policy_progress}")
             self.debug_strings.append(f" - {model_updates.policy_is_complete}")
             if model_updates.policy_is_complete == PolicyIsCompleteEnum.complete or \
                     model_updates.policy_is_complete == PolicyIsCompleteEnum.interrupt_policy:
@@ -66,9 +72,9 @@ class MetaAgent(BaseModel):
             self.current_policy = select_policies_result.policies[select_policies_result.selected_policy_idx]
             self.debug_strings.append(f"-- selected policy -")
             self.debug_strings.append(f"- {self.current_policy.policy}")
-            self.debug_strings.append(f"-- free energy causes -")
-            for free_energy in select_policies_result.free_energy_causes:
-                self.debug_strings.append(f"- {free_energy.cause} ({free_energy.estimated_free_energy})")
+            # self.debug_strings.append(f"-- free energy causes -")
+            # for free_energy in select_policies_result.free_energy_causes:
+            #     self.debug_strings.append(f"- {free_energy.cause} ({free_energy.estimated_free_energy})")
             self.debug_strings.append(f"-- policies -")
             for policy in select_policies_result.policies:
                 self.debug_strings.append(f"- policy: {policy.policy}")

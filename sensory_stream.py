@@ -53,8 +53,21 @@ class SensoryStream:
         for event in self.events:
             time_since = self._pretty_print_time_since(event.time_stamp)
             lines.append(f"{event.event} - {time_since}")
-        _str = "\n".join(reversed(lines))
+        _str = "\n".join(lines)
         return _str
+    
+    def pritty_print_split(self, time_stamp_to_split:str):
+        before_lines:str = []
+        after_lines:str = []
+        for event in self.events:
+            time_since = self._pretty_print_time_since(event.time_stamp)
+            if event.time_stamp < time_stamp_to_split:
+                before_lines.append(f"{event.event} - {time_since}")
+            else:
+                after_lines.append(f"{event.event} - {time_since}")
+        _before_lines = "\n".join(before_lines)
+        _after_lines = "\n".join(after_lines)
+        return _before_lines, _after_lines
 
 if __name__ == "__main__":
     stream = SesoryStream()
