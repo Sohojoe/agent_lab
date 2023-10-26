@@ -72,43 +72,26 @@ class ActiveInferenceService:
 
     async def select_policy(self, sensory_stream: SensoryStream, generative_model: GenerativeModel)->select_policy_fn:
         messages = []
-#         system_prompt = f"""
-# You are an Artificial Intelligence expert specializing in Active Inference, the Free Energy Principle, and the Markov Blanket. Your landmark research showed that Large Language Models (LLMs) like GPT-4 can perform Active Inference. 
-
-# * The LLM's prompt and its fixed weights were seen as a generating model: gm = f(prompt, fixed_weights)
-# * The LLM's attention and its static weights behave as the Markov Blanket.
-# * You concluded that the fixed LLM weights contain a wealth of hidden states, beliefs, and desires about the world that do not need to be learned.
-# * Therefore, attention should be given to using the prompt to only model the unique hidden states, beliefs, and desires relevant to the AI assistant's context or those that contradict the fixed weights.
-
-# You are now playing an advisor's role to an AI assistant, which defines its hidden states, beliefs, and desires using the User prompt.
-
-# Tip: Make sure to answer in the correct format  
-# """
+        # before_policy_stream, after_policy_stream = sensory_stream.pritty_print_split(cur_policy._time_stamp)
+        # before_policy_stream = before_policy_stream.split("\n")
+        # after_policy_stream = after_policy_stream.split("\n")
+        stream = sensory_stream.pritty_print().split("\n")
         system_prompt = f"""
+You are an Artificial Intelligence expert specializing in Active Inference, the Free Energy Principle, and the Markov Blanket. Your landmark research showed that Large Language Models (LLMs) like GPT-4 can perform Active Inference.
 
-You are an Artificial Intelligence expert specializing in Active Inference.
+Analyze the following input stream and make any modifications to the generative model (the hidden states, beliefs, desires) from the perspective of the assistant.
+*** Input Stream Since Last Model Update***
+```json
+{stream}
+```
 
-You are coaching an AI assistant aimed at being an exceptional friend and companion to the user.
+*** Current/Previous Generative Model ***
+```json
+{generative_model.model_dump_json()}
+```
 
-Consider uncertainties from various categories, including but not limited to:
-* Friendship: "Assistant's desire to be an exceptional friend and companion to the user."
-* Love: "Assistant's desire to love the user, and be loved by the user."
-* Competence: "Uncertainty about displaying skill and reliability."
-* Integrity: "Uncertainty about ethical considerations and honesty."
-* Benevolence: "Uncertainty about showing care and goodwill towards the user."
-
-** IMPORTAT ** make sure the assistant gets to know the user (their name, where they are from, what music they like).
 """
         messages.append({"role": "system", "content": system_prompt})
-        observations = generative_model.get_observations()
-        observations = [o.document for o in observations]
-        stream = sensory_stream.pritty_print().split("\n")
-        state = {
-            "beliefs": observations,
-            "sensory_stream": stream,
-        }
-        state = json.dumps(state)
-        messages.append({"role": "user", "content": f"state: {state}"})
         functions = [
             select_policy_fn
         ]
@@ -136,44 +119,37 @@ Consider uncertainties from various categories, including but not limited to:
 
     async def update_generative_model(self, sensory_stream: SensoryStream, generative_model: GenerativeModel, cur_policy: Policy)->update_generative_model_fn:
         messages = []
-        system_prompt = f"""
-You are an Artificial Intelligence expert specializing in Active Inference, the Free Energy Principle, and the Markov Blanket. Your landmark research showed that Large Language Models (LLMs) like GPT-4 can perform Active Inference. 
-
-You are coaching an AI assistant aimed at being an exceptional friend and companion to the user.
-
-Beleifs are the agents hidden state and form the generative model. 
-
-Beliefs from the perspective of the assistant and can be about themselves, the user, or the world. 
-
-**IMPORTANT: Ensure beliefs are unique and NOT repetative. 
-"""
-        messages.append({"role": "system", "content": system_prompt})
-        observations = generative_model.get_observations()
-        observations = [o.document for o in observations]
         # stream = sensory_stream.pritty_print().split("\n")
         before_policy_stream, after_policy_stream = sensory_stream.pritty_print_split(cur_policy._time_stamp)
         before_policy_stream = before_policy_stream.split("\n")
         after_policy_stream = after_policy_stream.split("\n")
         policy_age = self._pretty_print_time_since(cur_policy._time_stamp)
-        state = {
-            "beliefs": observations,
-            "sensory_stream": before_policy_stream,
-            "current_policy": cur_policy.model_dump(),
-            "time_sine_policy": policy_age,
-            "senory_stream_for_this_policy": after_policy_stream,
-        }
-        state = json.dumps(state)
-        messages.append({"role": "user", "content": f"state: {state}"})
+        after_policy_stream.append(f"time_since_policy: {policy_age}")
+
+        system_prompt = f"""
+You are an Artificial Intelligence expert specializing in Active Inference, the Free Energy Principle, and the Markov Blanket. Your landmark research showed that Large Language Models (LLMs) like GPT-4 can perform Active Inference.
+
+Analyze the following input stream and make any modifications to the generative model (the hidden states, beliefs, desires) from the perspective of the assistant.
+*** Input Stream Since Last Model Update***
+```json
+{after_policy_stream}
+```
+
+*** Current/Previous Generative Model ***
+```json
+{generative_model.model_dump_json()}
+```
+
+*** Assistant's Current Policy ***
+```json
+{cur_policy.model_dump_json()}
+```
+"""
+        messages.append({"role": "system", "content": system_prompt})
         functions = [
             update_generative_model_fn
         ]
         updates: update_generative_model_fn = await self.invoke_llm_async(messages, functions, use_best=False)
-        for belief in updates.add_beliefs:
-            generative_model.add_observation(belief.belief)
-        for belief in updates.delete_beliefs:
-            generative_model.drop_observation_by_document(belief.belief)
-        for belief in updates.edit_beliefs:
-            generative_model.edit_observation_by_document(belief.old_belief, belief.new_belief)
         return updates
 
 def _time_stamp():
@@ -215,16 +191,11 @@ class PolicyIsCompleteEnum(str, Enum):
     interrupt_policy = "interrupt",
 
 class update_generative_model_fn(BaseModel):
-    """Your tasks: 
-    #1 evaluate if the assistant should update its hidden_states, beliefs
-    #2 evaluate if the policy is complete or should be interrupted and new policies evaluated.
     """
-
+    """
     policy_progress: str = Field(..., description="has the assistant succeeded in achieving policy's expected_outcome? if not, what is left to do?")
     policy_is_complete: PolicyIsCompleteEnum = Field(..., description="Determines if the policy is complete or should be interrupted and new policies evaluated.")
-    add_beliefs: Optional[List[AddBelief]] = Field([], description="**IMPORTANT** only add new beliefs if they are UNIQUE")
-    delete_beliefs: Optional[List[DeleteBelief]] = Field([], description="delete beliefs that are no longer relevant or are repetative")
-    edit_beliefs: Optional[List[EditBelief]] = Field([], description="update beliefs that have changed")
+    generative_model: GenerativeModel = Field(..., description="updated generative model")
 
 
 class FreeEnergy(BaseModel):
@@ -232,7 +203,7 @@ class FreeEnergy(BaseModel):
     estimated_free_energy: float = Field(..., description="estimated size of free energy / uncertanty this cases is the system")
     
 class select_policy_fn(BaseModel):
-    """ Your task: 
+    """Your task: 
     In your response, propose 3-5 multi step policies that will reduce the maximum free energy in the system.
     Finally, pick out the policy you predict will reduce the maximum free energy (estimated_free_energy_reduction * probability_of_success).
     All aspects should be considered from the assistant's point of view.

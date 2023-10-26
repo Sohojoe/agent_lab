@@ -22,14 +22,8 @@ class MetaAgent(BaseModel):
 
     def __init__(self, **data):
         if 'state' not in data:
-            generative_model = GenerativeModelFactory(empty=True)
-            # generative_model.add_observation(
-            #      "The assistant's primary goal is to be a good companion and friend to the user.")
-            # generative_model.add_observation(
-            #      "The assistant is just meeting the user for the first time and is very excited to make a new friend.")
+            generative_model = GenerativeModelFactory()
             data['generative_model'] = generative_model
-        # if 'eval_service' not in data:
-            # data['eval_service'] = EvalService()
             
         super().__init__(**data)  # Call the original __init__ to ensure validation
 
@@ -39,10 +33,12 @@ class MetaAgent(BaseModel):
 
         self.step += 1
         self.debug_strings = []
-        self.debug_strings.append(f"--- observations ---")
-        observations = self.generative_model.get_observations()
-        for observation in observations:
-            self.debug_strings.append(f" - {observation.document}")
+        self.debug_strings.append(f"--- generative_model ---")
+        dump = self.generative_model.model_dump()
+        for key in self.generative_model.model_fields:
+            self.debug_strings.append (f"-- {key}")
+            for item in dump[key]:
+                self.debug_strings.append (f" - {item}")
         self.debug_strings.append(f"--- sensor_stream ---")
         for line in pritty_sensor_stream.split("\n"):
             self.debug_strings.append(f" - {line}")
@@ -54,14 +50,27 @@ class MetaAgent(BaseModel):
             self.debug_strings.append(f"- {self.current_policy.policy}")
             self.debug_strings.append(f"--- updating model...")
             model_updates = await active_inference_service.update_generative_model(sensor_stream, self.generative_model, self.current_policy)
-            for belief in model_updates.add_beliefs:
-                self.debug_strings.append(f" - add: {belief.belief}")
-            for belief in model_updates.delete_beliefs:
-                self.debug_strings.append(f" - delete: {belief.belief}")
-            for belief in model_updates.edit_beliefs:
-                self.debug_strings.append(f" - update: {belief.old_belief} -> {belief.new_belief}")
+            # for belief in model_updates.add_beliefs:
+            #     self.debug_strings.append(f" - add: {belief.belief}")
+            # for belief in model_updates.delete_beliefs:
+            #     self.debug_strings.append(f" - delete: {belief.belief}")
+            # for belief in model_updates.edit_beliefs:
+            #     self.debug_strings.append(f" - update: {belief.old_belief} -> {belief.new_belief}")
             self.debug_strings.append(f" free energy removed: {model_updates.policy_progress}")
             self.debug_strings.append(f" - {model_updates.policy_is_complete}")
+            old_generatilve_model = self.generative_model
+            self.generative_model = model_updates.generative_model
+            self.debug_strings.append(f"--- generative_model changes ---")
+            self.debug_strings.append (f"-- assistant_beliefs")
+            for item in self.generative_model.assistant_beliefs- old_generatilve_model.assistant_beliefs:
+                self.debug_strings.append (f" - {item}")
+            self.debug_strings.append (f"-- assistant_desires")
+            for item in self.generative_model.assistant_desires- old_generatilve_model.assistant_desires:
+                self.debug_strings.append (f" - {item}")
+            self.debug_strings.append (f"-- uncertainty_in_the_system")
+            for item in self.generative_model.uncertainty_in_the_system- old_generatilve_model.uncertainty_in_the_system:
+                self.debug_strings.append (f" - {item}")
+
             if model_updates.policy_is_complete == PolicyIsCompleteEnum.complete or \
                     model_updates.policy_is_complete == PolicyIsCompleteEnum.interrupt_policy:
                 self.current_policy = None
