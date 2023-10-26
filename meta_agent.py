@@ -1,3 +1,4 @@
+import asyncio
 from pydantic import ConfigDict, BaseModel, Field
 from typing import List, Dict
 from active_inference_service import ActiveInferenceService, Policy, PolicyIsCompleteEnum, select_policy_fn
@@ -49,30 +50,32 @@ class MetaAgent(BaseModel):
             self.debug_strings.append(f"--- current policy ---")
             self.debug_strings.append(f"- {self.current_policy.policy}")
             self.debug_strings.append(f"--- updating model...")
-            model_updates = await active_inference_service.update_generative_model(sensor_stream, self.generative_model, self.current_policy)
-            # for belief in model_updates.add_beliefs:
-            #     self.debug_strings.append(f" - add: {belief.belief}")
-            # for belief in model_updates.delete_beliefs:
-            #     self.debug_strings.append(f" - delete: {belief.belief}")
-            # for belief in model_updates.edit_beliefs:
-            #     self.debug_strings.append(f" - update: {belief.old_belief} -> {belief.new_belief}")
-            self.debug_strings.append(f" free energy removed: {model_updates.policy_progress}")
-            self.debug_strings.append(f" - {model_updates.policy_is_complete}")
-            old_generatilve_model = self.generative_model
-            self.generative_model = model_updates.generative_model
-            self.debug_strings.append(f"--- generative_model changes ---")
-            self.debug_strings.append (f"-- assistant_beliefs")
-            for item in self.generative_model.assistant_beliefs- old_generatilve_model.assistant_beliefs:
-                self.debug_strings.append (f" - {item}")
-            self.debug_strings.append (f"-- assistant_desires")
-            for item in self.generative_model.assistant_desires- old_generatilve_model.assistant_desires:
-                self.debug_strings.append (f" - {item}")
-            self.debug_strings.append (f"-- uncertainty_in_the_system")
-            for item in self.generative_model.uncertainty_in_the_system- old_generatilve_model.uncertainty_in_the_system:
-                self.debug_strings.append (f" - {item}")
 
-            if model_updates.policy_is_complete == PolicyIsCompleteEnum.complete or \
-                    model_updates.policy_is_complete == PolicyIsCompleteEnum.interrupt_policy:
+            model_task = asyncio.create_task(active_inference_service.update_generative_model(sensor_stream, self.generative_model, self.current_policy))
+            policy_task = asyncio.create_task(active_inference_service.track_policy_progress(sensor_stream, self.generative_model, self.current_policy))
+            model_update, policy_update = await asyncio.gather(model_task, policy_task)
+
+            self.debug_strings.append(f"--- generative_model changes ---")
+            old_generatilve_model = self.generative_model
+            self.generative_model = model_update.generative_model
+            if (len(self.generative_model.assistant_beliefs- old_generatilve_model.assistant_beliefs)):
+                self.debug_strings.append (f"-- assistant_beliefs")
+                for item in self.generative_model.assistant_beliefs- old_generatilve_model.assistant_beliefs:
+                    self.debug_strings.append (f" - {item}")
+            if (len(self.generative_model.assistant_desires- old_generatilve_model.assistant_desires)):
+                self.debug_strings.append (f"-- assistant_desires")
+                for item in self.generative_model.assistant_desires- old_generatilve_model.assistant_desires:
+                    self.debug_strings.append (f" - {item}")
+            if (len(self.generative_model.uncertainty_in_the_system- old_generatilve_model.uncertainty_in_the_system)):
+                self.debug_strings.append (f"-- uncertainty_in_the_system")
+                for item in self.generative_model.uncertainty_in_the_system- old_generatilve_model.uncertainty_in_the_system:
+                    self.debug_strings.append (f" - {item}")
+
+            self.debug_strings.append(f" policy_progress: {policy_update.policy_progress}")
+            self.debug_strings.append(f" - {policy_update.policy_is_complete.name}")
+
+            if policy_update.policy_is_complete == PolicyIsCompleteEnum.complete or \
+                    policy_update.policy_is_complete == PolicyIsCompleteEnum.interrupt_policy:
                 self.current_policy = None
 
         if self.current_policy is None:

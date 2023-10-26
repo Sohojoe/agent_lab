@@ -16,6 +16,7 @@ from sensory_stream import SensoryStream
 
 Policy = ForwardRef('Policy')
 update_generative_model_fn = ForwardRef('update_generative_model_fn')
+track_policy_progress_fn = ForwardRef('track_policy_progress_fn')
 select_policy_fn = ForwardRef('select_policy_fn')
 
 class ActiveInferenceService:
@@ -116,7 +117,38 @@ Analyze the following input stream and make any modifications to the generative 
             return f"{int(time_since / 3600)} hours ago"
         else:
             return f"{int(time_since / 86400)} days ago"
+        
+    async def track_policy_progress(self, sensory_stream: SensoryStream, generative_model: GenerativeModel, cur_policy: Policy)->track_policy_progress_fn:
+        messages = []
+        # stream = sensory_stream.pritty_print().split("\n")
+        before_policy_stream, after_policy_stream = sensory_stream.pritty_print_split(cur_policy._time_stamp)
+        before_policy_stream = before_policy_stream.split("\n")
+        after_policy_stream = after_policy_stream.split("\n")
+        policy_age = self._pretty_print_time_since(cur_policy._time_stamp)
+        after_policy_stream.append(f"time_since_policy: {policy_age}")
 
+        system_prompt = f"""
+You are an Artificial Intelligence expert specializing in Active Inference, the Free Energy Principle, and the Markov Blanket. Your landmark research showed that Large Language Models (LLMs) like GPT-4 can perform Active Inference.
+
+Analyze the input stream:
+
+*** Input Stream Since Last Model Update***
+```json
+{after_policy_stream}
+```
+
+*** Assistant's Current Policy ***
+```json
+{cur_policy.model_dump_json()}
+```
+"""
+        messages.append({"role": "system", "content": system_prompt})
+        functions = [
+            track_policy_progress_fn
+        ]
+        updates: track_policy_progress_fn = await self.invoke_llm_async(messages, functions, use_best=False)
+        return updates
+    
     async def update_generative_model(self, sensory_stream: SensoryStream, generative_model: GenerativeModel, cur_policy: Policy)->update_generative_model_fn:
         messages = []
         # stream = sensory_stream.pritty_print().split("\n")
@@ -193,10 +225,22 @@ class PolicyIsCompleteEnum(str, Enum):
 class update_generative_model_fn(BaseModel):
     """
     """
-    policy_progress: str = Field(..., description="has the assistant succeeded in achieving policy's expected_outcome? if not, what is left to do?")
-    policy_is_complete: PolicyIsCompleteEnum = Field(..., description="Determines if the policy is complete or should be interrupted and new policies evaluated.")
     generative_model: GenerativeModel = Field(..., description="updated generative model")
 
+class track_policy_progress_fn(BaseModel):
+    """ Important: only use information in the Input Stream....
+* if assistant has completed the policy:
+  * policy_is_complete = complete
+  * policy_progress = [detail did the expected_outcome happen? how much free energy was removed?]
+* else:
+  * policy_is_complete = continue_policy
+  * policy_progress = [detail what is left to do; detail expected_outcome status]
+* if the assistant has been attempting the policy for a long time or if the inverse of the expected outcome happened
+  * policy_is_complete = interrupt_policy
+
+    """
+    policy_progress: str = Field(..., description="follow rules above for policy_progress")
+    policy_is_complete: PolicyIsCompleteEnum = Field(..., description="continue_policy, complete, or interrupt_policy")
 
 class FreeEnergy(BaseModel):
     cause: str = Field(..., description="cause of free energy / uncertanty in the system")
