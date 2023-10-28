@@ -71,7 +71,10 @@ class MetaAgent(BaseModel):
                 for item in self.generative_model.uncertainty_in_the_system- old_generatilve_model.uncertainty_in_the_system:
                     self.debug_strings.append (f" - {item}")
 
-            self.debug_strings.append(f" policy_progress: {policy_update.policy_progress}")
+            # self.debug_strings.append(f" policy_progress: {policy_update.policy_progress}")
+            self.debug_strings.append(f" progress: {policy_update.question_1}")
+            self.debug_strings.append(f" outcome achieved?: {policy_update.question_2}")
+            self.debug_strings.append(f" still likley?: {policy_update.question_3}")
             self.debug_strings.append(f" - {policy_update.policy_is_complete.name}")
 
             if policy_update.policy_is_complete == PolicyIsCompleteEnum.complete or \

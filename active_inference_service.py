@@ -229,17 +229,12 @@ class update_generative_model_fn(BaseModel):
 
 class track_policy_progress_fn(BaseModel):
     """ Important: only use information in the Input Stream....
-* if assistant has completed the policy:
-  * policy_is_complete = complete
-  * policy_progress = [detail did the expected_outcome happen? how much free energy was removed?]
-* else:
-  * policy_is_complete = continue_policy
-  * policy_progress = [detail what is left to do; detail expected_outcome status]
-* if the assistant has been attempting the policy for a long time or if the inverse of the expected outcome happened
-  * policy_is_complete = interrupt_policy
 
     """
-    policy_progress: str = Field(..., description="follow rules above for policy_progress")
+    # policy_progress: str = Field(..., description="follow rules above for policy_progress")
+    question_1: str = Field(..., description="what progress has the assistant made on the policy?")
+    question_2: str = Field(..., description="has the expected_outcome been achieved?")
+    question_3: str = Field(..., description="is it still likley the expected_outcome will be achieved?")
     policy_is_complete: PolicyIsCompleteEnum = Field(..., description="continue_policy, complete, or interrupt_policy")
 
 class FreeEnergy(BaseModel):
