@@ -132,17 +132,14 @@ You are an Artificial Intelligence expert specializing in Active Inference, the 
 
 Analyze the input stream:
 
-*** Input Stream Since Last Model Update***
-```json
-{after_policy_stream}
-```
-
 *** Assistant's Current Policy ***
 ```json
 {cur_policy.model_dump_json()}
 ```
 """
         messages.append({"role": "system", "content": system_prompt})
+        for message in after_policy_stream:
+            messages.append({"role": "user", "content": message})
         functions = [
             track_policy_progress_fn
         ]
@@ -162,10 +159,6 @@ Analyze the input stream:
 You are an Artificial Intelligence expert specializing in Active Inference, the Free Energy Principle, and the Markov Blanket. Your landmark research showed that Large Language Models (LLMs) like GPT-4 can perform Active Inference.
 
 Analyze the following input stream and make any modifications to the generative model (the hidden states, beliefs, desires) from the perspective of the assistant.
-*** Input Stream Since Last Model Update***
-```json
-{after_policy_stream}
-```
 
 *** Current/Previous Generative Model ***
 ```json
@@ -178,6 +171,8 @@ Analyze the following input stream and make any modifications to the generative 
 ```
 """
         messages.append({"role": "system", "content": system_prompt})
+        for message in after_policy_stream:
+            messages.append({"role": "user", "content": message})
         functions = [
             update_generative_model_fn
         ]

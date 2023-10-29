@@ -40,9 +40,9 @@ class MetaAgent(BaseModel):
             self.debug_strings.append (f"-- {key}")
             for item in dump[key]:
                 self.debug_strings.append (f" - {item}")
-        self.debug_strings.append(f"--- sensor_stream ---")
-        for line in pritty_sensor_stream.split("\n"):
-            self.debug_strings.append(f" - {line}")
+        # self.debug_strings.append(f"--- sensor_stream ---")
+        # for line in pritty_sensor_stream.split("\n"):
+        #     self.debug_strings.append(f" - {line}")
 
         active_inference_service = ActiveInferenceService()
 
