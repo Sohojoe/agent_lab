@@ -65,13 +65,13 @@ class ActiveInferenceService:
                 print(f"OpenAI API returned an API Error: {e}")
                 print(f"Retrying in {delay} seconds...")
 
-            except openai.error.APIConnectionError as e:
-                print(f"Failed to connect to OpenAI API: {e}")
-                print(f"Retrying in {delay} seconds...")
+            # except openai.error.APIConnectionError as e:
+            #     print(f"Failed to connect to OpenAI API: {e}")
+            #     print(f"Retrying in {delay} seconds...")
 
-            except openai.error.RateLimitError as e:
-                print(f"OpenAI API request exceeded rate limit: {e}")
-                print(f"Retrying in {delay} seconds...")
+            # except openai.error.RateLimitError as e:
+            #     print(f"OpenAI API request exceeded rate limit: {e}")
+            #     print(f"Retrying in {delay} seconds...")
 
             except Exception as e:
                 print(f"OpenAI API unknown error: {e}")

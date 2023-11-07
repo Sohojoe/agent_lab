@@ -77,9 +77,8 @@ class ChatService:
                 async for chunk in response:
                     if cancel_event is not None and cancel_event.is_set():
                         return
-                    chunk_message = chunk['choices'][0]['delta']
-                    if 'content' in chunk_message:
-                        chunk_text = chunk_message['content']
+                    chunk_text = chunk.choices[0].delta.content
+                    if chunk_text:
                         current_sentence += chunk_text
                         llm_response += chunk_text
                         text_to_speak = self._should_we_send_to_voice(current_sentence)
@@ -101,17 +100,17 @@ class ChatService:
                 await asyncio.sleep(delay)
                 delay *= 2
 
-            except openai.error.APIConnectionError as e:
-                print(f"Failed to connect to OpenAI API: {e}")
-                print(f"Retrying in {delay} seconds...")
-                await asyncio.sleep(delay)
-                delay *= 2
+            # except openai.error.APIConnectionError as e:
+            #     print(f"Failed to connect to OpenAI API: {e}")
+            #     print(f"Retrying in {delay} seconds...")
+            #     await asyncio.sleep(delay)
+            #     delay *= 2
 
-            except openai.error.RateLimitError as e:
-                print(f"OpenAI API request exceeded rate limit: {e}")
-                print(f"Retrying in {delay} seconds...")
-                await asyncio.sleep(delay)
-                delay *= 2
+            # except openai.error.RateLimitError as e:
+            #     print(f"OpenAI API request exceeded rate limit: {e}")
+            #     print(f"Retrying in {delay} seconds...")
+            #     await asyncio.sleep(delay)
+            #     delay *= 2
 
             except Exception as e:
                 print(f"OpenAI API unknown error: {e}")
