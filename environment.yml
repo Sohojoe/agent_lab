@@ -17,7 +17,7 @@ dependencies:
     # - numpy==1.25.2
     # - open_clip_torch==2.20.0
     # - transformers==4.33.1
-    - openai==0.28.0
+    - openai==1.1.1
     # - elevenlabs==0.2.26
     # - ray[default]==2.6.3
     # - ray==2.6.3

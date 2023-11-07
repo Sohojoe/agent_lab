@@ -7,6 +7,8 @@ import json
 import os
 import traceback
 import openai
+from openai import AsyncOpenAI
+
 from pydantic import BaseModel, Field, PrivateAttr
 from typing import Any, Callable, ForwardRef, List, Optional, Sequence
 from generative_model import GenerativeModel
@@ -22,7 +24,9 @@ select_policy_fn = ForwardRef('select_policy_fn')
 class ActiveInferenceService:
     def __init__(self, api="openai", fast_model_id = "gpt-3.5-turbo", best_model_id="gpt-4"):
         self._api = api
-        openai.api_key = os.getenv("OPENAI_API_KEY")
+        self._aclient = AsyncOpenAI(
+            api_key=os.getenv("OPENAI_API_KEY")
+        )
         self._fast_model_id = fast_model_id
         self._best_model_id = best_model_id
 
@@ -30,27 +34,34 @@ class ActiveInferenceService:
     async def invoke_llm_async(self, messages, functions, use_best=False, cancel_event=None):
         delay = 0.1
         openai_functions = [convert_pydantic_to_openai_function(f) for f in functions]
-        fn_names = [oai_fn["name"] for oai_fn in openai_functions]
+        fn_names = [oai_fn["function"]["name"] for oai_fn in openai_functions]
         # function_call="auto" if len(functions) > 1 else f"{{'name': '{fn_names[0]}'}}"
-        function_call="auto" if len(functions) > 1 else {'name': fn_names[0]}
+        function_call="auto" if len(functions) > 1 else {
+            "type": "function", 
+            "function": {"name": fn_names[0]}
+        }
         # function_call="auto"
         model_id = self._best_model_id if use_best else self._fast_model_id
 
         while True:
             try:
-                response = await openai.ChatCompletion.acreate(
+                response = await self._aclient.chat.completions.create(
                     model=model_id,
                     messages=messages,
                     temperature=1.0,
-                    functions=openai_functions,
-                    function_call=function_call,
+                    tools=openai_functions,
+                    tool_choice=function_call,
                     stream=False
                 )
                 output = response.choices[0].message
-                function_instance = create_instance_from_response(output, functions)
-                return function_instance
+                function_instances = create_instance_from_response(output, functions)
+                if len(function_instances) == 0:
+                    raise Exception("No function call in the response.")
+                if len(function_instances) > 1:
+                    raise Exception("only 1 function call currently supported.")
+                return function_instances[0]
 
-            except openai.error.APIError as e:
+            except openai.APIError as e:
                 print(f"OpenAI API returned an API Error: {e}")
                 print(f"Retrying in {delay} seconds...")
 

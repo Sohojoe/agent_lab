@@ -123,15 +123,20 @@ The response should be in the form of a json list:
 
 import os
 import openai
+from openai import AsyncOpenAI
+
+aclient = AsyncOpenAI(
+    api_key = os.getenv("OPENAI_API_KEY")
+)
 # model_id = "gpt-3.5-turbo"
 model_id = "gpt-4"
-api_key = os.getenv("OPENAI_API_KEY")
+
 
 async def create_catogory_async(messages):
     delay = 1
     while True:
         try:
-            response = await openai.ChatCompletion.acreate(
+            response = await aclient.chat.completions.create(
                 model=model_id,
                 messages=messages,
                 temperature=1.0,
@@ -139,7 +144,7 @@ async def create_catogory_async(messages):
             )
             break
 
-        except openai.error.APIError as e:
+        except openai.APIError as e:
             print(f"OpenAI API returned an API Error: {e}")
             print(f"Retrying in {delay} seconds...")
 

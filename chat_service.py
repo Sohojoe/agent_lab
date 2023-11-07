@@ -3,11 +3,16 @@ import itertools
 import json
 import os
 import openai
+from openai import AsyncOpenAI
+
+
 
 class ChatService:
     def __init__(self, api="openai", model_id = "gpt-3.5-turbo"):
         self._api = api
-        openai.api_key = os.getenv("OPENAI_API_KEY")
+        self._aclient = AsyncOpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+        )
         self._model_id = model_id
 
     def _should_we_send_to_voice(self, sentence:str):
@@ -62,7 +67,7 @@ class ChatService:
 
         while True:
             try:
-                response = await openai.ChatCompletion.acreate(
+                response = await self._aclient.chat.completions.create(
                     model=self._model_id,
                     messages=messages,
                     temperature=1.0,  # use 0 for debugging/more deterministic results
@@ -90,7 +95,7 @@ class ChatService:
                     yield current_sentence, True
                 return
 
-            except openai.error.APIError as e:
+            except openai.APIError as e:
                 print(f"OpenAI API returned an API Error: {e}")
                 print(f"Retrying in {delay} seconds...")
                 await asyncio.sleep(delay)

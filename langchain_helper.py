@@ -4,6 +4,7 @@ from typing import Callable, Optional, Type, TypedDict
 
 from pydantic import BaseModel
 from json_schema import dereference_refs
+from openai.types.chat import ChatCompletionMessage
 
 
 class FunctionDescription(TypedDict):
@@ -28,32 +29,39 @@ def convert_pydantic_to_openai_function(
     description = description or schema["description"]
     schema.pop("description", None)
     return {
-        "name": name or schema["title"],
-        "description": description,
-        "parameters": schema,
+        "type": "function",
+            "function": {
+                "name": name or schema["title"],
+                "description": description,
+                "parameters": schema,
+            },      
     }
 
-def create_instance_from_response(response:str, functions: [Callable]):
+def create_instance_from_response(response:ChatCompletionMessage, functions: [Callable]):
     available_functions = {cls.__name__: cls for cls in functions}
-    if "function_call" not in response:
+    if response.tool_calls is None:
         print("No function call in the response.")
         return
     
-    function_name = response["function_call"]["name"]
-    arguments = response["function_call"]["arguments"]
-    try:
-        arguments = json.loads(arguments)
-    except json.JSONDecodeError:
-        print("Failed to decode JSON string.")
-        return    
-
-    if function_name not in available_functions:
-        print(f"Function {function_name} not found.")
-        return
+    instances = []
+    for tool_call in response.tool_calls:
         
-    FunctionClass = available_functions[function_name]
-    instance = FunctionClass(**arguments)
-    return instance
+        function_name = tool_call.function.name
+        arguments = tool_call.function.arguments
+        try:
+            arguments = json.loads(arguments)
+        except json.JSONDecodeError:
+            print("Failed to decode JSON string.")
+            return    
+
+        if function_name not in available_functions:
+            print(f"Function {function_name} not found.")
+            return
+            
+        FunctionClass = available_functions[function_name]
+        instance = FunctionClass(**arguments)
+        instances.append(instance)
+    return instances
 
 # # reference: https://github.com/langchain-ai/langchain/blob/940b9ae30ace7d57fff1e98275bc5e4e254b0675/libs/langchain/langchain/chains/openai_functions/base.py
 

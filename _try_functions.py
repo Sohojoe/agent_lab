@@ -55,7 +55,7 @@ functions = [
 ]
 
 openai_functions = [convert_pydantic_to_openai_function(f) for f in functions]
-fn_names = [oai_fn["name"] for oai_fn in openai_functions]
+fn_names = [oai_fn["function"]["name"] for oai_fn in openai_functions]
 
 
 for function in fn_names:
@@ -63,11 +63,17 @@ for function in fn_names:
 
 
 import os
-import openai
-model_id = "gpt-3.5-turbo"
+from openai import OpenAI
+
+# model_id = "gpt-3.5-turbo"
 # model_id = "gpt-4"
+model_id = "gpt-3.5-turbo-1106"
+# model_id = "gpt-4-1106-preview"
 api_key = os.getenv("OPENAI_API_KEY")
 
+client = OpenAI(
+  api_key=api_key
+)
 
 def get_messages(input):
     messages = [
@@ -93,59 +99,64 @@ def print_output(output):
 
 
 messages = get_messages("Harry was a chubby brown beagle who loved chicken")
-response = openai.ChatCompletion.create(
+response = client.chat.completions.create(
                     model=model_id,
                     messages=messages,
-                    functions=openai_functions,
-                    function_call="auto",
+                    tools=openai_functions,
+                    tool_choice="auto",
                     temperature=1.0,  # use 0 for debugging/more deterministic results
                     stream=False
                 )
 output =  response.choices[0].message
 # print_output(output)
-function_instance = create_instance_from_response(output, functions)
-function_instance.invoke()
+function_instances = create_instance_from_response(output, functions)
+for function_instance in function_instances:
+    function_instance.invoke()
 
 messages = get_messages("Sally is 13")
-response = openai.ChatCompletion.create(
+response = client.chat.completions.create(
                     model=model_id,
                     messages=messages,
-                    functions=openai_functions,
-                    function_call="auto",
+                    tools=openai_functions,
+                    tool_choice="auto",
                     temperature=1.0,  # use 0 for debugging/more deterministic results
                     stream=False
                 )
 output =  response.choices[0].message
 # print_output(output)
-function_instance = create_instance_from_response(output, functions)
-function_instance.invoke()
+function_instances = create_instance_from_response(output, functions)
+for function_instance in function_instances:
+    function_instance.invoke()
 
 messages = get_messages("Sally is 13, Joey just turned 12 and loves spinach. Caroline is 10 years older than Sally.")
-response = openai.ChatCompletion.create(
+response = client.chat.completions.create(
                     model=model_id,
                     messages=messages,
-                    functions=[openai_functions[1]],
-                    function_call="auto",
+                    tools=[openai_functions[1]],
+                    tool_choice="auto",
                     temperature=0.0,  # use 0 for debugging/more deterministic results
                     stream=False
                 )
 output =  response.choices[0].message
 # print_output(output)
-function_instance = create_instance_from_response(output, functions)
-function_instance.invoke()
+function_instances = create_instance_from_response(output, functions)
+for function_instance in function_instances:
+    function_instance.invoke()
+
 
 messages = get_messages("The most important thing to remember about Tommy, my 12 year old, is that he'll do anything for apple pie.")
-response = openai.ChatCompletion.create(
+response = client.chat.completions.create(
                     model=model_id,
                     messages=messages,
-                    functions=openai_functions,
-                    function_call="auto",
+                    tools=openai_functions,
+                    tool_choice="auto",
                     temperature=1.0,  # use 0 for debugging/more deterministic results
                     stream=False
                 )
 output =  response.choices[0].message
 # print_output(output)
-function_instance = create_instance_from_response(output, functions)
-function_instance.invoke()
+function_instances = create_instance_from_response(output, functions)
+for function_instance in function_instances:
+    function_instance.invoke()
 
 print ("-- done --")
